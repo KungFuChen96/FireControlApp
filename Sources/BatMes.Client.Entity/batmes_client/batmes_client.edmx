@@ -1,0 +1,760 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+    <Schema Namespace="batmes_client.Store" Provider="MySql.Data.MySqlClient" ProviderManifestToken="8.0" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="battery">
+          <Key>
+            <PropertyRef Name="battery_code" />
+            <PropertyRef Name="test_no" />
+          </Key>
+          <Property Name="battery_code" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="test_no" Type="int" Nullable="false" />
+          <Property Name="ocv" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="shell_v" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="dv" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="acir" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="dcir" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="temp" Type="decimal" Precision="9" Scale="3" Nullable="false" />
+          <Property Name="kval" Type="decimal" Precision="18" Scale="6" Nullable="false" />
+          <Property Name="proc_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="ops_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="proj_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="batch_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="battery_type_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="tray_code" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="create_time" Type="datetime" Precision="0" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="result" Type="int" Nullable="false" />
+          <Property Name="result_time" Type="datetime" Precision="0" />
+        </EntityType>
+        <EntityType Name="battery_result_code">
+          <Key>
+            <PropertyRef Name="result_code" />
+          </Key>
+          <Property Name="result_code" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="custom_code" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+        </EntityType>
+        <EntityType Name="cell">
+          <Key>
+            <PropertyRef Name="cell_id" />
+          </Key>
+          <Property Name="cell_id" Type="int" Nullable="false" />
+          <Property Name="product_line" Type="varchar" MaxLength="32" />
+          <Property Name="type" Type="int" Nullable="false" />
+          <Property Name="cell_status" Type="int" Nullable="false" />
+          <Property Name="row" Type="int" />
+          <Property Name="col" Type="int" />
+          <Property Name="lay" Type="int" />
+          <Property Name="last_update_time" Type="datetime" Precision="0" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="255" />
+          <Property Name="extend_field1" Type="varchar" MaxLength="255" />
+          <Property Name="extend_field2" Type="varchar" MaxLength="255" />
+          <Property Name="extend_field3" Type="varchar" MaxLength="255" />
+        </EntityType>
+        <EntityType Name="func">
+          <Key>
+            <PropertyRef Name="func_id" />
+          </Key>
+          <Property Name="func_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="func_code" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+          <Property Name="order_idx" Type="int" Nullable="false" />
+          <Property Name="parent_id" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="logs">
+          <Key>
+            <PropertyRef Name="log_id" />
+          </Key>
+          <Property Name="log_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="title" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="cont" Type="mediumtext" Nullable="false" />
+          <Property Name="type" Type="int" Nullable="false" />
+          <Property Name="create_time" Type="datetime" Precision="0" StoreGeneratedPattern="Identity" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ops">
+          <Key>
+            <PropertyRef Name="ops_id" />
+          </Key>
+          <Property Name="ops_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="ops_name" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="ops_val" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+        </EntityType>
+        <EntityType Name="role">
+          <Key>
+            <PropertyRef Name="role_id" />
+          </Key>
+          <Property Name="role_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+        </EntityType>
+        <EntityType Name="role_func">
+          <Key>
+            <PropertyRef Name="role_id" />
+            <PropertyRef Name="func_id" />
+          </Key>
+          <Property Name="role_id" Type="int" Nullable="false" />
+          <Property Name="func_id" Type="int" Nullable="false" />
+          <Property Name="is_select" Type="bit" Nullable="false" />
+          <Property Name="is_insert" Type="bit" Nullable="false" />
+          <Property Name="is_update" Type="bit" Nullable="false" />
+          <Property Name="is_delete" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="station">
+          <Key>
+            <PropertyRef Name="station_id" />
+          </Key>
+          <Property Name="station_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="type" Type="int" Nullable="false" />
+          <Property Name="location" Type="int" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+          <Property Name="is_disable" Type="bit" Nullable="false" />
+          <Property Name="is_lock_fire" Type="bit" Nullable="false" />
+          <Property Name="is_lock_real" Type="bit" Nullable="false" />
+          <Property Name="real_fail_times" Type="int" Nullable="false" />
+          <Property Name="status" Type="int" Nullable="false" />
+          <Property Name="status_time" Type="datetime" Precision="0" Nullable="false" />
+        </EntityType>
+        <EntityType Name="station_cell">
+          <Key>
+            <PropertyRef Name="station_id" />
+            <PropertyRef Name="cell_no" />
+          </Key>
+          <Property Name="station_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="cell_no" Type="int" Nullable="false" />
+          <Property Name="battery_code" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="battery_time" Type="datetime" Precision="0" />
+          <Property Name="is_fake" Type="bit" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sys_event">
+          <Key>
+            <PropertyRef Name="event_id" />
+          </Key>
+          <Property Name="event_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="title" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="cont" Type="text" Nullable="false" />
+          <Property Name="level" Type="int" Nullable="false" />
+          <Property Name="create_time" Type="datetime" Precision="0" StoreGeneratedPattern="Identity" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sys_para">
+          <Key>
+            <PropertyRef Name="para_id" />
+          </Key>
+          <Property Name="para_id" Type="varchar" MaxLength="64" Nullable="false" />
+          <Property Name="para_type" Type="int" Nullable="false" />
+          <Property Name="para_val" Type="mediumtext" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+          <Property Name="is_show" Type="bit" Nullable="false" />
+          <Property Name="show_idx" Type="int" Nullable="false" />
+          <Property Name="sort_id" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sys_para_sort">
+          <Key>
+            <PropertyRef Name="sort_id" />
+          </Key>
+          <Property Name="sort_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+          <Property Name="show_idx" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="timed_task">
+          <Key>
+            <PropertyRef Name="task_id" />
+          </Key>
+          <Property Name="task_id" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="task_status" Type="int" Nullable="false" />
+          <Property Name="tray_code" Type="varchar" MaxLength="32" />
+          <Property Name="cell_id" Type="int" Nullable="false" />
+          <Property Name="processes" Type="int" />
+          <Property Name="create_time" Type="datetime" Precision="0" Nullable="false" />
+          <Property Name="last_update_time" Type="datetime" Precision="0" Nullable="false" />
+        </EntityType>
+        <EntityType Name="tray_map">
+          <Key>
+            <PropertyRef Name="tray_code" />
+            <PropertyRef Name="cell_id" />
+          </Key>
+          <Property Name="tray_code" Type="varchar" MaxLength="50" Nullable="false" />
+          <Property Name="cell_id" Type="int" Nullable="false" />
+          <Property Name="processes" Type="int" Nullable="false" />
+          <Property Name="exec_status" Type="int" Nullable="false" />
+          <Property Name="type" Type="int" Nullable="false" />
+          <Property Name="mes_model" Type="longtext" Nullable="false" />
+          <Property Name="bts_result" Type="longtext" />
+          <Property Name="last_update_time" Type="datetime" Precision="0" Nullable="false" />
+        </EntityType>
+        <EntityType Name="user">
+          <Key>
+            <PropertyRef Name="user_id" />
+          </Key>
+          <Property Name="user_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="account" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="pswd" Type="varchar" MaxLength="512" Nullable="false" />
+          <Property Name="name" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="gender" Type="int" Nullable="false" />
+          <Property Name="tel" Type="varchar" MaxLength="32" Nullable="false" />
+          <Property Name="im" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="email" Type="varchar" MaxLength="128" Nullable="false" />
+          <Property Name="remark" Type="varchar" MaxLength="1024" Nullable="false" />
+          <Property Name="login_time" Type="datetime" Precision="0" />
+          <Property Name="login_count" Type="int" Nullable="false" />
+          <Property Name="status" Type="int" Nullable="false" />
+          <Property Name="status_time" Type="datetime" Precision="0" Nullable="false" />
+          <Property Name="create_time" Type="datetime" Precision="0" StoreGeneratedPattern="Identity" Nullable="false" />
+        </EntityType>
+        <EntityType Name="user_log">
+          <Key>
+            <PropertyRef Name="log_id" />
+          </Key>
+          <Property Name="log_id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="user_id" Type="int" Nullable="false" />
+          <Property Name="func_id" Type="int" Nullable="false" />
+          <Property Name="ops_type" Type="int" Nullable="false" />
+          <Property Name="cont" Type="varchar" MaxLength="4096" Nullable="false" />
+          <Property Name="create_time" Type="datetime" Precision="0" StoreGeneratedPattern="Identity" Nullable="false" />
+        </EntityType>
+        <EntityType Name="user_role">
+          <Key>
+            <PropertyRef Name="user_id" />
+            <PropertyRef Name="role_id" />
+          </Key>
+          <Property Name="user_id" Type="int" Nullable="false" />
+          <Property Name="role_id" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityContainer Name="batmes_clientStoreContainer">
+          <EntitySet Name="battery" EntityType="Self.battery" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="battery_result_code" EntityType="Self.battery_result_code" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="cell" EntityType="Self.cell" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="func" EntityType="Self.func" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="logs" EntityType="Self.logs" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="ops" EntityType="Self.ops" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="role" EntityType="Self.role" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="role_func" EntityType="Self.role_func" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="station" EntityType="Self.station" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="station_cell" EntityType="Self.station_cell" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="sys_event" EntityType="Self.sys_event" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="sys_para" EntityType="Self.sys_para" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="sys_para_sort" EntityType="Self.sys_para_sort" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="timed_task" EntityType="Self.timed_task" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="tray_map" EntityType="Self.tray_map" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="user" EntityType="Self.user" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="user_log" EntityType="Self.user_log" Schema="weilan_fire_control" store:Type="Tables" />
+          <EntitySet Name="user_role" EntityType="Self.user_role" Schema="weilan_fire_control" store:Type="Tables" />
+        </EntityContainer>
+      </Schema></edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="batmes_client" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityContainer Name="batmes_client_entity" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="battery" EntityType="batmes_client.battery" />
+          <EntitySet Name="battery_result_code" EntityType="batmes_client.battery_result_code" />
+          <EntitySet Name="cell" EntityType="batmes_client.cell" />
+          <EntitySet Name="func" EntityType="batmes_client.func" />
+          <EntitySet Name="logs" EntityType="batmes_client.logs" />
+          <EntitySet Name="ops" EntityType="batmes_client.ops" />
+          <EntitySet Name="role" EntityType="batmes_client.role" />
+          <EntitySet Name="role_func" EntityType="batmes_client.role_func" />
+          <EntitySet Name="station" EntityType="batmes_client.station" />
+          <EntitySet Name="station_cell" EntityType="batmes_client.station_cell" />
+          <EntitySet Name="sys_event" EntityType="batmes_client.sys_event" />
+          <EntitySet Name="sys_para" EntityType="batmes_client.sys_para" />
+          <EntitySet Name="sys_para_sort" EntityType="batmes_client.sys_para_sort" />
+          <EntitySet Name="timed_task" EntityType="batmes_client.timed_task" />
+          <EntitySet Name="tray_map" EntityType="batmes_client.tray_map" />
+          <EntitySet Name="user" EntityType="batmes_client.user" />
+          <EntitySet Name="user_log" EntityType="batmes_client.user_log" />
+          <EntitySet Name="user_role" EntityType="batmes_client.user_role" />
+        </EntityContainer>
+        <EntityType Name="battery">
+          <Key>
+            <PropertyRef Name="battery_code" />
+            <PropertyRef Name="test_no" />
+          </Key>
+          <Property Name="battery_code" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="test_no" Type="Int32" Nullable="false" />
+          <Property Name="ocv" Type="Decimal" Nullable="false" />
+          <Property Name="shell_v" Type="Decimal" Nullable="false" />
+          <Property Name="dv" Type="Decimal" Nullable="false" />
+          <Property Name="acir" Type="Decimal" Nullable="false" />
+          <Property Name="dcir" Type="Decimal" Nullable="false" />
+          <Property Name="temp" Type="Decimal" Nullable="false" />
+          <Property Name="kval" Type="Decimal" Nullable="false" />
+          <Property Name="proc_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="ops_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="proj_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="batch_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="battery_type_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="tray_code" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="result" Type="Int32" Nullable="false" />
+          <Property Name="result_time" Type="DateTime" />
+        </EntityType>
+        <EntityType Name="battery_result_code">
+          <Key>
+            <PropertyRef Name="result_code" />
+          </Key>
+          <Property Name="result_code" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="custom_code" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="cell">
+          <Key>
+            <PropertyRef Name="cell_id" />
+          </Key>
+          <Property Name="cell_id" Type="Int32" Nullable="false" />
+          <Property Name="product_line" Type="String" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="type" Type="Int32" Nullable="false" />
+          <Property Name="cell_status" Type="Int32" Nullable="false" />
+          <Property Name="row" Type="Int32" />
+          <Property Name="col" Type="Int32" />
+          <Property Name="lay" Type="Int32" />
+          <Property Name="last_update_time" Type="DateTime" Nullable="false" />
+          <Property Name="remark" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="extend_field1" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="extend_field2" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+          <Property Name="extend_field3" Type="String" MaxLength="255" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="func">
+          <Key>
+            <PropertyRef Name="func_id" />
+          </Key>
+          <Property Name="func_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="func_code" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+          <Property Name="order_idx" Type="Int32" Nullable="false" />
+          <Property Name="parent_id" Type="Int32" Nullable="false" />
+        </EntityType>
+        <EntityType Name="logs">
+          <Key>
+            <PropertyRef Name="log_id" />
+          </Key>
+          <Property Name="log_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="title" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="cont" Type="String" Nullable="false" MaxLength="16777215" FixedLength="false" Unicode="false" />
+          <Property Name="type" Type="Int32" Nullable="false" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+        </EntityType>
+        <EntityType Name="ops">
+          <Key>
+            <PropertyRef Name="ops_id" />
+          </Key>
+          <Property Name="ops_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="ops_name" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="ops_val" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="role">
+          <Key>
+            <PropertyRef Name="role_id" />
+          </Key>
+          <Property Name="role_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+        </EntityType>
+        <EntityType Name="role_func">
+          <Key>
+            <PropertyRef Name="role_id" />
+            <PropertyRef Name="func_id" />
+          </Key>
+          <Property Name="role_id" Type="Int32" Nullable="false" />
+          <Property Name="func_id" Type="Int32" Nullable="false" />
+          <Property Name="is_select" Type="Boolean" Nullable="false" />
+          <Property Name="is_insert" Type="Boolean" Nullable="false" />
+          <Property Name="is_update" Type="Boolean" Nullable="false" />
+          <Property Name="is_delete" Type="Boolean" Nullable="false" />
+        </EntityType>
+        <EntityType Name="station">
+          <Key>
+            <PropertyRef Name="station_id" />
+          </Key>
+          <Property Name="station_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="type" Type="Int32" Nullable="false" />
+          <Property Name="location" Type="Int32" Nullable="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+          <Property Name="is_disable" Type="Boolean" Nullable="false" />
+          <Property Name="is_lock_fire" Type="Boolean" Nullable="false" />
+          <Property Name="is_lock_real" Type="Boolean" Nullable="false" />
+          <Property Name="real_fail_times" Type="Int32" Nullable="false" />
+          <Property Name="status" Type="Int32" Nullable="false" />
+          <Property Name="status_time" Type="DateTime" Nullable="false" />
+        </EntityType>
+        <EntityType Name="station_cell">
+          <Key>
+            <PropertyRef Name="station_id" />
+            <PropertyRef Name="cell_no" />
+          </Key>
+          <Property Name="station_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="cell_no" Type="Int32" Nullable="false" />
+          <Property Name="battery_code" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="battery_time" Type="DateTime" />
+          <Property Name="is_fake" Type="Boolean" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sys_event">
+          <Key>
+            <PropertyRef Name="event_id" />
+          </Key>
+          <Property Name="event_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="title" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="cont" Type="String" Nullable="false" MaxLength="65535" FixedLength="false" Unicode="false" />
+          <Property Name="level" Type="Int32" Nullable="false" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+        </EntityType>
+        <EntityType Name="sys_para">
+          <Key>
+            <PropertyRef Name="para_id" />
+          </Key>
+          <Property Name="para_id" Type="String" Nullable="false" MaxLength="64" FixedLength="false" Unicode="false" />
+          <Property Name="para_type" Type="Int32" Nullable="false" />
+          <Property Name="para_val" Type="String" Nullable="false" MaxLength="16777215" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+          <Property Name="is_show" Type="Boolean" Nullable="false" />
+          <Property Name="show_idx" Type="Int32" Nullable="false" />
+          <Property Name="sort_id" Type="Int32" Nullable="false" />
+        </EntityType>
+        <EntityType Name="sys_para_sort">
+          <Key>
+            <PropertyRef Name="sort_id" />
+          </Key>
+          <Property Name="sort_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+          <Property Name="show_idx" Type="Int32" Nullable="false" />
+        </EntityType>
+        <EntityType Name="timed_task">
+          <Key>
+            <PropertyRef Name="task_id" />
+          </Key>
+          <Property Name="task_id" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="task_status" Type="Int32" Nullable="false" />
+          <Property Name="tray_code" Type="String" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="cell_id" Type="Int32" Nullable="false" />
+          <Property Name="processes" Type="Int32" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" />
+          <Property Name="last_update_time" Type="DateTime" Nullable="false" />
+        </EntityType>
+        <EntityType Name="tray_map">
+          <Key>
+            <PropertyRef Name="tray_code" />
+            <PropertyRef Name="cell_id" />
+          </Key>
+          <Property Name="tray_code" Type="String" Nullable="false" MaxLength="50" FixedLength="false" Unicode="false" />
+          <Property Name="cell_id" Type="Int32" Nullable="false" />
+          <Property Name="processes" Type="Int32" Nullable="false" />
+          <Property Name="exec_status" Type="Int32" Nullable="false" />
+          <Property Name="type" Type="Int32" Nullable="false" />
+          <Property Name="mes_model" Type="String" Nullable="false" MaxLength="1073741823" FixedLength="false" Unicode="false" />
+          <Property Name="bts_result" Type="String" MaxLength="1073741823" FixedLength="false" Unicode="false" />
+          <Property Name="last_update_time" Type="DateTime" Nullable="false" />
+        </EntityType>
+        <EntityType Name="user">
+          <Key>
+            <PropertyRef Name="user_id" />
+          </Key>
+          <Property Name="user_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="account" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="pswd" Type="String" Nullable="false" MaxLength="512" FixedLength="false" Unicode="false" />
+          <Property Name="name" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="gender" Type="Int32" Nullable="false" />
+          <Property Name="tel" Type="String" Nullable="false" MaxLength="32" FixedLength="false" Unicode="false" />
+          <Property Name="im" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="email" Type="String" Nullable="false" MaxLength="128" FixedLength="false" Unicode="false" />
+          <Property Name="remark" Type="String" Nullable="false" MaxLength="1024" FixedLength="false" Unicode="false" />
+          <Property Name="login_time" Type="DateTime" />
+          <Property Name="login_count" Type="Int32" Nullable="false" />
+          <Property Name="status" Type="Int32" Nullable="false" />
+          <Property Name="status_time" Type="DateTime" Nullable="false" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+        </EntityType>
+        <EntityType Name="user_log">
+          <Key>
+            <PropertyRef Name="log_id" />
+          </Key>
+          <Property Name="log_id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="user_id" Type="Int32" Nullable="false" />
+          <Property Name="func_id" Type="Int32" Nullable="false" />
+          <Property Name="ops_type" Type="Int32" Nullable="false" />
+          <Property Name="cont" Type="String" Nullable="false" MaxLength="4096" FixedLength="false" Unicode="false" />
+          <Property Name="create_time" Type="DateTime" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+        </EntityType>
+        <EntityType Name="user_role">
+          <Key>
+            <PropertyRef Name="user_id" />
+            <PropertyRef Name="role_id" />
+          </Key>
+          <Property Name="user_id" Type="Int32" Nullable="false" />
+          <Property Name="role_id" Type="Int32" Nullable="false" />
+        </EntityType>
+        </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="batmes_clientStoreContainer" CdmEntityContainer="batmes_client_entity">
+          <EntitySetMapping Name="battery">
+            <EntityTypeMapping TypeName="batmes_client.battery">
+              <MappingFragment StoreEntitySet="battery">
+                <ScalarProperty Name="result_time" ColumnName="result_time" />
+                <ScalarProperty Name="result" ColumnName="result" />
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="tray_code" ColumnName="tray_code" />
+                <ScalarProperty Name="battery_type_id" ColumnName="battery_type_id" />
+                <ScalarProperty Name="batch_id" ColumnName="batch_id" />
+                <ScalarProperty Name="proj_id" ColumnName="proj_id" />
+                <ScalarProperty Name="ops_id" ColumnName="ops_id" />
+                <ScalarProperty Name="proc_id" ColumnName="proc_id" />
+                <ScalarProperty Name="kval" ColumnName="kval" />
+                <ScalarProperty Name="temp" ColumnName="temp" />
+                <ScalarProperty Name="dcir" ColumnName="dcir" />
+                <ScalarProperty Name="acir" ColumnName="acir" />
+                <ScalarProperty Name="dv" ColumnName="dv" />
+                <ScalarProperty Name="shell_v" ColumnName="shell_v" />
+                <ScalarProperty Name="ocv" ColumnName="ocv" />
+                <ScalarProperty Name="test_no" ColumnName="test_no" />
+                <ScalarProperty Name="battery_code" ColumnName="battery_code" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="battery_result_code">
+            <EntityTypeMapping TypeName="batmes_client.battery_result_code">
+              <MappingFragment StoreEntitySet="battery_result_code">
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="custom_code" ColumnName="custom_code" />
+                <ScalarProperty Name="result_code" ColumnName="result_code" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="cell">
+            <EntityTypeMapping TypeName="batmes_client.cell">
+              <MappingFragment StoreEntitySet="cell">
+                <ScalarProperty Name="extend_field3" ColumnName="extend_field3" />
+                <ScalarProperty Name="extend_field2" ColumnName="extend_field2" />
+                <ScalarProperty Name="extend_field1" ColumnName="extend_field1" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="last_update_time" ColumnName="last_update_time" />
+                <ScalarProperty Name="lay" ColumnName="lay" />
+                <ScalarProperty Name="col" ColumnName="col" />
+                <ScalarProperty Name="row" ColumnName="row" />
+                <ScalarProperty Name="cell_status" ColumnName="cell_status" />
+                <ScalarProperty Name="type" ColumnName="type" />
+                <ScalarProperty Name="product_line" ColumnName="product_line" />
+                <ScalarProperty Name="cell_id" ColumnName="cell_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="func">
+            <EntityTypeMapping TypeName="batmes_client.func">
+              <MappingFragment StoreEntitySet="func">
+                <ScalarProperty Name="parent_id" ColumnName="parent_id" />
+                <ScalarProperty Name="order_idx" ColumnName="order_idx" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="func_code" ColumnName="func_code" />
+                <ScalarProperty Name="func_id" ColumnName="func_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="logs">
+            <EntityTypeMapping TypeName="batmes_client.logs">
+              <MappingFragment StoreEntitySet="logs">
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="type" ColumnName="type" />
+                <ScalarProperty Name="cont" ColumnName="cont" />
+                <ScalarProperty Name="title" ColumnName="title" />
+                <ScalarProperty Name="log_id" ColumnName="log_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ops">
+            <EntityTypeMapping TypeName="batmes_client.ops">
+              <MappingFragment StoreEntitySet="ops">
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="ops_val" ColumnName="ops_val" />
+                <ScalarProperty Name="ops_name" ColumnName="ops_name" />
+                <ScalarProperty Name="ops_id" ColumnName="ops_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="role">
+            <EntityTypeMapping TypeName="batmes_client.role">
+              <MappingFragment StoreEntitySet="role">
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="role_id" ColumnName="role_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="role_func">
+            <EntityTypeMapping TypeName="batmes_client.role_func">
+              <MappingFragment StoreEntitySet="role_func">
+                <ScalarProperty Name="is_delete" ColumnName="is_delete" />
+                <ScalarProperty Name="is_update" ColumnName="is_update" />
+                <ScalarProperty Name="is_insert" ColumnName="is_insert" />
+                <ScalarProperty Name="is_select" ColumnName="is_select" />
+                <ScalarProperty Name="func_id" ColumnName="func_id" />
+                <ScalarProperty Name="role_id" ColumnName="role_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="station">
+            <EntityTypeMapping TypeName="batmes_client.station">
+              <MappingFragment StoreEntitySet="station">
+                <ScalarProperty Name="status_time" ColumnName="status_time" />
+                <ScalarProperty Name="status" ColumnName="status" />
+                <ScalarProperty Name="real_fail_times" ColumnName="real_fail_times" />
+                <ScalarProperty Name="is_lock_real" ColumnName="is_lock_real" />
+                <ScalarProperty Name="is_lock_fire" ColumnName="is_lock_fire" />
+                <ScalarProperty Name="is_disable" ColumnName="is_disable" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="location" ColumnName="location" />
+                <ScalarProperty Name="type" ColumnName="type" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="station_id" ColumnName="station_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="station_cell">
+            <EntityTypeMapping TypeName="batmes_client.station_cell">
+              <MappingFragment StoreEntitySet="station_cell">
+                <ScalarProperty Name="is_fake" ColumnName="is_fake" />
+                <ScalarProperty Name="battery_time" ColumnName="battery_time" />
+                <ScalarProperty Name="battery_code" ColumnName="battery_code" />
+                <ScalarProperty Name="cell_no" ColumnName="cell_no" />
+                <ScalarProperty Name="station_id" ColumnName="station_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="sys_event">
+            <EntityTypeMapping TypeName="batmes_client.sys_event">
+              <MappingFragment StoreEntitySet="sys_event">
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="level" ColumnName="level" />
+                <ScalarProperty Name="cont" ColumnName="cont" />
+                <ScalarProperty Name="title" ColumnName="title" />
+                <ScalarProperty Name="event_id" ColumnName="event_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="sys_para">
+            <EntityTypeMapping TypeName="batmes_client.sys_para">
+              <MappingFragment StoreEntitySet="sys_para">
+                <ScalarProperty Name="sort_id" ColumnName="sort_id" />
+                <ScalarProperty Name="show_idx" ColumnName="show_idx" />
+                <ScalarProperty Name="is_show" ColumnName="is_show" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="para_val" ColumnName="para_val" />
+                <ScalarProperty Name="para_type" ColumnName="para_type" />
+                <ScalarProperty Name="para_id" ColumnName="para_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="sys_para_sort">
+            <EntityTypeMapping TypeName="batmes_client.sys_para_sort">
+              <MappingFragment StoreEntitySet="sys_para_sort">
+                <ScalarProperty Name="show_idx" ColumnName="show_idx" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="sort_id" ColumnName="sort_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="timed_task">
+            <EntityTypeMapping TypeName="batmes_client.timed_task">
+              <MappingFragment StoreEntitySet="timed_task">
+                <ScalarProperty Name="last_update_time" ColumnName="last_update_time" />
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="processes" ColumnName="processes" />
+                <ScalarProperty Name="cell_id" ColumnName="cell_id" />
+                <ScalarProperty Name="tray_code" ColumnName="tray_code" />
+                <ScalarProperty Name="task_status" ColumnName="task_status" />
+                <ScalarProperty Name="task_id" ColumnName="task_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="tray_map">
+            <EntityTypeMapping TypeName="batmes_client.tray_map">
+              <MappingFragment StoreEntitySet="tray_map">
+                <ScalarProperty Name="last_update_time" ColumnName="last_update_time" />
+                <ScalarProperty Name="bts_result" ColumnName="bts_result" />
+                <ScalarProperty Name="mes_model" ColumnName="mes_model" />
+                <ScalarProperty Name="type" ColumnName="type" />
+                <ScalarProperty Name="exec_status" ColumnName="exec_status" />
+                <ScalarProperty Name="processes" ColumnName="processes" />
+                <ScalarProperty Name="cell_id" ColumnName="cell_id" />
+                <ScalarProperty Name="tray_code" ColumnName="tray_code" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="user">
+            <EntityTypeMapping TypeName="batmes_client.user">
+              <MappingFragment StoreEntitySet="user">
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="status_time" ColumnName="status_time" />
+                <ScalarProperty Name="status" ColumnName="status" />
+                <ScalarProperty Name="login_count" ColumnName="login_count" />
+                <ScalarProperty Name="login_time" ColumnName="login_time" />
+                <ScalarProperty Name="remark" ColumnName="remark" />
+                <ScalarProperty Name="email" ColumnName="email" />
+                <ScalarProperty Name="im" ColumnName="im" />
+                <ScalarProperty Name="tel" ColumnName="tel" />
+                <ScalarProperty Name="gender" ColumnName="gender" />
+                <ScalarProperty Name="name" ColumnName="name" />
+                <ScalarProperty Name="pswd" ColumnName="pswd" />
+                <ScalarProperty Name="account" ColumnName="account" />
+                <ScalarProperty Name="user_id" ColumnName="user_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="user_log">
+            <EntityTypeMapping TypeName="batmes_client.user_log">
+              <MappingFragment StoreEntitySet="user_log">
+                <ScalarProperty Name="create_time" ColumnName="create_time" />
+                <ScalarProperty Name="cont" ColumnName="cont" />
+                <ScalarProperty Name="ops_type" ColumnName="ops_type" />
+                <ScalarProperty Name="func_id" ColumnName="func_id" />
+                <ScalarProperty Name="user_id" ColumnName="user_id" />
+                <ScalarProperty Name="log_id" ColumnName="log_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="user_role">
+            <EntityTypeMapping TypeName="batmes_client.user_role">
+              <MappingFragment StoreEntitySet="user_role">
+                <ScalarProperty Name="role_id" ColumnName="role_id" />
+                <ScalarProperty Name="user_id" ColumnName="user_id" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="false" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="false" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="无" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

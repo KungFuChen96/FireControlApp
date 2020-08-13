@@ -1,0 +1,314 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{F03A783C-61C9-47F9-9DC0-DF2932C625E8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BatMes.Client.Controls</RootNamespace>
+    <AssemblyName>BatMes.Client.Controls</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="CSkin, Version=16.1.14.2, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packageEx\CSkin.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data, Version=6.10.8.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\mysql\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data.Entity.EF6, Version=6.10.8.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\mysql\MySql.Data.Entity.EF6.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+    <Reference Include="XY">
+      <HintPath>..\packages\xy\XY.dll</HintPath>
+    </Reference>
+    <Reference Include="XY.NetF">
+      <HintPath>..\packages\xy\XY.NetF.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="BatteryData.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BatteryData.Designer.cs">
+      <DependentUpon>BatteryData.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Bottom.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Bottom.Designer.cs">
+      <DependentUpon>Bottom.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BRCode.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BRCode.Designer.cs">
+      <DependentUpon>BRCode.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BRCodeAdd.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BRCodeAdd.Designer.cs">
+      <DependentUpon>BRCodeAdd.cs</DependentUpon>
+    </Compile>
+    <Compile Include="BRCodeEdit.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="BRCodeEdit.Designer.cs">
+      <DependentUpon>BRCodeEdit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Calendar.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Calendar.Designer.cs">
+      <DependentUpon>Calendar.cs</DependentUpon>
+    </Compile>
+    <Compile Include="CskinExt\AsyncUpdate.cs" />
+    <Compile Include="CskinExt\BorderLabel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CskinExt\SkinBtnPlus.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CskinExt\SkinButtonExt.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CskinExt\SkinButtonExt2.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="CskinExt\SkinToolTipFactory.cs" />
+    <Compile Include="CskinExt\StartButton.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="ExtFuncs\Convert.cs" />
+    <Compile Include="ExtFuncs\CskinExt.cs" />
+    <Compile Include="ExtFuncs\EnumExtension.cs" />
+    <Compile Include="ExtFuncs\GeneralExt.cs" />
+    <Compile Include="FontAwesome.cs" />
+    <Compile Include="IconButton.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="IconButton.Designer.cs">
+      <DependentUpon>IconButton.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MasterDefault.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MasterDefault.Designer.cs">
+      <DependentUpon>MasterDefault.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MyControls\BasePanel\MyTableLayoutPanel.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="Ops.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Ops.Designer.cs">
+      <DependentUpon>Ops.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpsAdd.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="OpsAdd.Designer.cs">
+      <DependentUpon>OpsAdd.cs</DependentUpon>
+    </Compile>
+    <Compile Include="OpsEdit.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="OpsEdit.Designer.cs">
+      <DependentUpon>OpsEdit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="RealLogColor.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="RealLogColor.Designer.cs">
+      <DependentUpon>RealLogColor.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Service.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Service.Designer.cs">
+      <DependentUpon>Service.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Signal.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Signal.Designer.cs">
+      <DependentUpon>Signal.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SysEvent.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SysEvent.Designer.cs">
+      <DependentUpon>SysEvent.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SysLog.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SysLog.Designer.cs">
+      <DependentUpon>SysLog.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SysLogDetail.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SysLogDetail.Designer.cs">
+      <DependentUpon>SysLogDetail.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SysPar.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SysPar.Designer.cs">
+      <DependentUpon>SysPar.cs</DependentUpon>
+    </Compile>
+    <Compile Include="SysParEdit.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="SysParEdit.Designer.cs">
+      <DependentUpon>SysParEdit.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Tools.cs" />
+    <Compile Include="Tools\DrawHelper.cs" />
+    <Compile Include="Tools\IniConfig.cs" />
+    <Compile Include="Tools\IPager.cs" />
+    <Compile Include="Tools\NotifyMiddle.cs" />
+    <Compile Include="Tools\Pager.cs" />
+    <Compile Include="Tools\Setting\BaseSetting.cs" />
+    <Compile Include="Tools\Setting\SettingHelper.cs" />
+    <Compile Include="Tools\Tools.cs" />
+    <Compile Include="Tools\Utility.cs" />
+    <Compile Include="Top.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="Top.Designer.cs">
+      <DependentUpon>Top.cs</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="BatteryData.resx">
+      <DependentUpon>BatteryData.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Bottom.resx">
+      <DependentUpon>Bottom.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BRCode.resx">
+      <DependentUpon>BRCode.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BRCodeAdd.resx">
+      <DependentUpon>BRCodeAdd.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="BRCodeEdit.resx">
+      <DependentUpon>BRCodeEdit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Calendar.resx">
+      <DependentUpon>Calendar.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="IconButton.resx">
+      <DependentUpon>IconButton.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="MasterDefault.resx">
+      <DependentUpon>MasterDefault.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Ops.resx">
+      <DependentUpon>Ops.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpsAdd.resx">
+      <DependentUpon>OpsAdd.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OpsEdit.resx">
+      <DependentUpon>OpsEdit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="RealLogColor.resx">
+      <DependentUpon>RealLogColor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Service.resx">
+      <DependentUpon>Service.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Signal.resx">
+      <DependentUpon>Signal.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SysEvent.resx">
+      <DependentUpon>SysEvent.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SysLog.resx">
+      <DependentUpon>SysLog.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SysLogDetail.resx">
+      <DependentUpon>SysLogDetail.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SysPar.resx">
+      <DependentUpon>SysPar.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="SysParEdit.resx">
+      <DependentUpon>SysParEdit.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Top.resx">
+      <DependentUpon>Top.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BatMes.Client.Entity\BatMes.Client.Entity.csproj">
+      <Project>{0BFD6AB9-E266-4E8C-B888-991B1FA6F9C8}</Project>
+      <Name>BatMes.Client.Entity</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\BatMes.Client\BatMes.Client.csproj">
+      <Project>{0f91fc6d-4f6b-4e2f-bc49-d8fabd684586}</Project>
+      <Name>BatMes.Client</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="Resources\brands-regular-400-otf.otf" />
+    <None Include="Resources\brands-regular-400-ttf.ttf" />
+    <None Include="Resources\free-regular-400-otf.otf" />
+    <None Include="Resources\free-regular-400-ttf.ttf" />
+    <None Include="Resources\free-solid-900-otf.otf" />
+    <None Include="Resources\free-solid-900-ttf.ttf" />
+    <None Include="Tools\Config.ini" />
+    <None Include="Tools\NLog.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

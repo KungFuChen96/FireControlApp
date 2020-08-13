@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\EntityFramework.6.4.0\build\EntityFramework.props" Condition="Exists('..\packages\EntityFramework.6.4.0\build\EntityFramework.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{0BFD6AB9-E266-4E8C-B888-991B1FA6F9C8}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>BatMes.Client.Entity</RootNamespace>
+    <AssemblyName>BatMes.Client.Entity</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\packages\EntityFramework.6.4.0\lib\net45\EntityFramework.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data, Version=6.10.8.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\mysql\MySql.Data.dll</HintPath>
+    </Reference>
+    <Reference Include="MySql.Data.Entity.EF6, Version=6.10.8.0, Culture=neutral, PublicKeyToken=c5687fc88969c44d, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\mysql\MySql.Data.Entity.EF6.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.ComponentModel.DataAnnotations" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="batmes_client\batmes_client.Context.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>batmes_client.Context.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\batmes_client.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\batmes_client.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>batmes_client.edmx</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\batmes_client_entity.cs" />
+    <Compile Include="batmes_client\battery.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\battery_result_code.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\cell.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\func.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\logs.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\ops.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\role.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\role_func.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\station.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\station_cell.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\sys_event.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\sys_para.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\sys_para_sort.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\timed_task.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\tray_map.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\user.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\user_log.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="batmes_client\user_role.cs">
+      <DependentUpon>batmes_client.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="batmes_client\batmes_client.Context.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>batmes_client.Context.cs</LastGenOutput>
+      <DependentUpon>batmes_client.edmx</DependentUpon>
+    </Content>
+    <Content Include="batmes_client\batmes_client.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <DependentUpon>batmes_client.edmx</DependentUpon>
+      <LastGenOutput>batmes_client.cs</LastGenOutput>
+    </Content>
+    <Content Include="batmes_client\scripts\data.sql" />
+    <Content Include="batmes_client\scripts\sql.sql" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+    <EntityDeploy Include="batmes_client\batmes_client.edmx">
+      <Generator>EntityModelCodeGenerator</Generator>
+      <LastGenOutput>batmes_client.Designer.cs</LastGenOutput>
+    </EntityDeploy>
+    <None Include="batmes_client\batmes_client.edmx.diagram">
+      <DependentUpon>batmes_client.edmx</DependentUpon>
+    </None>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>这台计算机上缺少此项目引用的 NuGet 程序包。使用“NuGet 程序包还原”可下载这些程序包。有关更多信息，请参见 http://go.microsoft.com/fwlink/?LinkID=322105。缺少的文件是 {0}。</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.0\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.0\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\packages\EntityFramework.6.4.0\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\EntityFramework.6.4.0\build\EntityFramework.targets'))" />
+  </Target>
+  <Import Project="..\packages\EntityFramework.6.4.0\build\EntityFramework.targets" Condition="Exists('..\packages\EntityFramework.6.4.0\build\EntityFramework.targets')" />
+</Project>
