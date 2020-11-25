@@ -81,14 +81,14 @@ namespace FireBusiness
         {
             Instance.StartTask().ContinueWith(t =>
             {
-                CORE.Instance.OnMessage("初始化完成...", SysEventLevel.Info);
-                WcfService.WcfServiceForMES(CORE.Instance.SysPara<string>("TcpServiceForMES"), CORE.Instance.SysPara<string>("HttpServiceForMES"));
-            });
-
-            DEV.Instance.OpenDevice().ContinueWith(t =>
-            {
-                CoreBusiness.GreatHub();
-                CoreBusiness.Hub.StartTaskWhenInit();
+                //CORE.Instance.OnMessage("初始化完成", SysEventLevel.Info);
+                //WcfService.WcfServiceForMES(CORE.Instance.SysPara<string>("TcpServiceForMES"), CORE.Instance.SysPara<string>("HttpServiceForMES"));
+                DEV.Instance.OpenDevice().ContinueWith(k =>
+                {
+                    //DEV.Instance.AlwaysOnDev();
+                    CoreBusiness.GreatHub();
+                    CoreBusiness.Hub.StartTaskWhenInit();
+                });
             });
         }
 

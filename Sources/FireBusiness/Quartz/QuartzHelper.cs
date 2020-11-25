@@ -25,7 +25,7 @@ namespace FireBusiness.Quartz
             properties["quartz.threadPool.threadPriority"] = ThreadPriority.Normal.ToString();
             // 远程输出配置
             properties["quartz.scheduler.exporter.type"] = "Quartz.Simpl.RemotingSchedulerExporter, Quartz";
-            properties["quartz.scheduler.exporter.port"] = "666";  //配置端口号
+            properties["quartz.scheduler.exporter.port"] = "555";  //配置端口号
             properties["quartz.scheduler.exporter.bindName"] = "QuartzScheduler";
             properties["quartz.scheduler.exporter.channelType"] = "tcp"; //协议类型
             //创建一个工厂
@@ -45,11 +45,11 @@ namespace FireBusiness.Quartz
         /// <param name="startAtSeconds">创建任务后多久开始执行（单位：秒）</param>
         /// <param name="intervalInSeconds">每个多久再次执行（单位：秒）</param>
         /// <param name="objData">传值的对象</param>
-        public static void CommonAddJob<T>(string keyValue, int startAtSeconds, int intervalInSeconds, object objData = null) where T : IJob
+        public static void AddJob<T>(string keyValue, int startAtSeconds, int intervalInSeconds, object objData = null) where T : IJob
         {
             IJobDetail job = JobBuilder.Create<T>().WithIdentity(keyValue).Build();
             if (objData != null)
-                job.JobDataMap.Put(Configs.paramName, objData);
+                job.JobDataMap.Put(Configs.ParamName, objData);
 
             ITrigger trigger = TriggerBuilder.Create()
                 .StartAt(new DateTimeOffset(DateTime.Now.AddSeconds(startAtSeconds)))
@@ -58,35 +58,6 @@ namespace FireBusiness.Quartz
                 .Build();
             _scheduler.ScheduleJob(job, trigger);
         }
-        #endregion
-
-        #region 静置类型
-        ///// <summary>
-        ///// 将任务加入队列，静置任务使用
-        ///// </summary>
-        ///// <typeparam name="T"></typeparam>
-        ///// <param name="keyValue">任务唯一编号</param>
-        ///// <param name="startAtSeconds">创建任务后多久开始执行（单位：秒）</param>
-        ///// <param name="intervalInMinutes">每个多久再次执行（单位：分钟）</param>
-        ///// <param name="objData">传值的对象</param>
-        ///// <param name="taskStatus">任务类型</param>
-        ///// <param name="taskId">任务唯一辨识</param>
-        //public static void AddJob<T>(string keyValue, int startAtSeconds, int intervalInMinutes, QuartzDataType taskStatus, object objData, string taskId = "") where T : IJob
-        //{
-        //    IJobDetail job = JobBuilder.Create<T>().WithIdentity(keyValue).Build();
-
-        //    job.JobDataMap.Put(Configs.typeName, (int)taskStatus);
-        //    job.JobDataMap.Put(Configs.taskIdName, taskId);
-        //    if (objData != null)
-        //        job.JobDataMap.Put(Configs.paramName, objData);
-
-        //    ITrigger trigger = TriggerBuilder.Create()
-        //        .StartAt(new DateTimeOffset(DateTime.Now.AddSeconds(startAtSeconds)))
-        //        .WithSimpleSchedule(x => x.WithIntervalInMinutes(intervalInMinutes)
-        //        .RepeatForever())
-        //        .Build();
-        //    _scheduler.ScheduleJob(job, trigger);
-        //}
         #endregion
 
         #region 其他类型

@@ -13,7 +13,7 @@ namespace FireBusiness.IntervalJob
         {
             return Task.Run(() =>
             {
-                CoreBusiness.Hub.DoFireHnadle();
+                CoreBusiness.Hub.FireHnadle();
             });
         }
     }

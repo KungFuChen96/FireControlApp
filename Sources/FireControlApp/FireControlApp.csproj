@@ -62,9 +62,16 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\..\..\..\wxa123-auto\Sources\packages\MySql.Data\MySql.Data.Entity.EF6.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.7.3\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -93,11 +100,23 @@
     <Compile Include="Default.Designer.cs">
       <DependentUpon>Default.cs</DependentUpon>
     </Compile>
+    <Compile Include="InputPswForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="InputPswForm.Designer.cs">
+      <DependentUpon>InputPswForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="ModifyStatus.cs">
       <SubType>Form</SubType>
     </Compile>
     <Compile Include="ModifyStatus.Designer.cs">
       <DependentUpon>ModifyStatus.cs</DependentUpon>
+    </Compile>
+    <Compile Include="MyGroupBox.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="MyGroupBox.Designer.cs">
+      <DependentUpon>MyGroupBox.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -112,6 +131,9 @@
     </Compile>
     <EmbeddedResource Include="Default.resx">
       <DependentUpon>Default.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="InputPswForm.resx">
+      <DependentUpon>InputPswForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="ModifyStatus.resx">
       <DependentUpon>ModifyStatus.cs</DependentUpon>

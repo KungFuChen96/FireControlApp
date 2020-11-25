@@ -48,11 +48,6 @@ namespace FireBusiness.Model
         public TestResult TestResult { get; set; }
 
         /// <summary>
-        /// 电芯测试数据
-        /// </summary>
-        public List<ComleteModel> ComleteModels { get; set; }
-
-        /// <summary>
         /// 创建日期
         /// </summary>
         public DateTime CreateTime { get; set; } = DateTime.Now;

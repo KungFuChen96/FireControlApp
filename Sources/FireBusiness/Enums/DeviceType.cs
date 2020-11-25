@@ -12,19 +12,24 @@ namespace FireBusiness.Enums
     public enum DeviceType
     {
         /// <summary>
-        /// 所有硬件都生效
+        /// 分容PLC
         /// </summary>
-        ALLHardware = 0,
+        Plc_Fc = 1,
 
         /// <summary>
-        /// plc
+        /// 分容PLC
         /// </summary>
-        PLC = 1,
+        Plc_FcStandby = 2,
+
+        /// <summary>
+        /// 分容PLC
+        /// </summary>
+        Plc_HotStandby = 3,
 
         /// <summary>
         /// ModBus
         /// </summary>
-        ModBus = 2,
+        ModBus = 5,
 
         /// <summary>
         /// 其他类型设备

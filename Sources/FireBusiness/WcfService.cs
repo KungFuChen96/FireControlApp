@@ -42,7 +42,7 @@ namespace FireBusiness.WCF
                 mesService.InFinishedEvent += MesService_InFinishedEvent; 
                 mesService.OutAuthEvent += MesService_OutAuthEvent; 
                 mesService.OutFinishedEvent += MesService_OutFinishedEvent; 
-                CORE.Instance.OnMessage($"WCF_FOR_MES服务开启成功。", BatMes.Client.Enums.SysEventLevel.Info);
+                CORE.Instance.OnMessage($"WCF服务开启成功。", BatMes.Client.Enums.SysEventLevel.Info);
             }
             catch (Exception ex)
             {

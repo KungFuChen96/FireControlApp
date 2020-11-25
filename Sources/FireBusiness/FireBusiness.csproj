@@ -34,14 +34,20 @@
     <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
       <HintPath>..\packages\Newtonsoft.Json.10.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
+    <Reference Include="NLog, Version=4.0.0.0, Culture=neutral, PublicKeyToken=5120e14c03d0593c, processorArchitecture=MSIL">
+      <HintPath>..\packages\NLog.4.7.3\lib\net45\NLog.dll</HintPath>
+    </Reference>
     <Reference Include="Quartz, Version=3.0.7.0, Culture=neutral, PublicKeyToken=f6b8c98a402cc8a4, processorArchitecture=MSIL">
       <HintPath>..\packages\Quartz.3.0.7\lib\net452\Quartz.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
     <Reference Include="System.Runtime.Remoting" />
+    <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Transactions" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -50,6 +56,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Common\Extensions.cs" />
     <Compile Include="Common\JsonHelper.cs" />
     <Compile Include="Common\PublicDel.cs" />
     <Compile Include="Common\StringUtil.cs" />
@@ -58,24 +65,29 @@
     <Compile Include="DEV.cs" />
     <Compile Include="Enums\DeviceType.cs" />
     <Compile Include="Enums\ExecStatus.cs" />
+    <Compile Include="Enums\FcUploadVal.cs" />
+    <Compile Include="Enums\FirePost.cs" />
     <Compile Include="Enums\IntoType.cs" />
     <Compile Include="Enums\ErrorType.cs" />
     <Compile Include="Enums\QuartzDataType.cs" />
     <Compile Include="Enums\SignalType.cs" />
-    <Compile Include="IntervalJob\DoSprayJob.cs" />
-    <Compile Include="IntervalJob\FaultJob.cs" />
+    <Compile Include="IntervalJob\FcJob.cs" />
+    <Compile Include="IntervalJob\FcStandbyJob.cs" />
     <Compile Include="IntervalJob\FireJob.cs" />
     <Compile Include="IntervalJob\HeartBitJob.cs" />
-    <Compile Include="IntervalJob\OutReadyJob.cs" />
-    <Compile Include="IntervalJob\UploadJob.cs" />
-    <Compile Include="Model\ComleteModel.cs" />
+    <Compile Include="IntervalJob\HotStandbyJob.cs" />
+    <Compile Include="LogManager\LogManager.cs" />
+    <Compile Include="Model\CellEvent.cs" />
+    <Compile Include="Model\DevAddMap.cs" />
+    <Compile Include="Model\FireControlModel.cs" />
     <Compile Include="Model\FireModel.cs" />
+    <Compile Include="Model\ICellEntity.cs" />
     <Compile Include="Model\MESResults.cs" />
     <Compile Include="Model\TrayModel.cs" />
     <Compile Include="Model\UpLoadModel.cs" />
-    <Compile Include="OutSystem\BtsHelper.cs" />
+    <Compile Include="OutSystem\BtsManager.cs" />
     <Compile Include="OutSystem\BtsService.cs" />
-    <Compile Include="OutSystem\MesHelper.cs" />
+    <Compile Include="OutSystem\MesManager.cs" />
     <Compile Include="OutSystem\MesService.cs" />
     <Compile Include="Quartz\QuartzHelper.cs" />
     <Compile Include="WcfService.cs" />
@@ -131,11 +143,11 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="CellMap\CellMapToMES.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
     <None Include="CellMap\CellMapToBTS.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="NLog.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
   </ItemGroup>

@@ -1,16 +1,13 @@
 ﻿using BatMes.Client.Entity.batmes_client;
-using CCWin.SkinControl;
 using ExtFuncs;
 using FireBusiness.Enums;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using FireBusiness;
+using FireBusiness.Model;
 
 namespace FireControlApp
 {
@@ -28,15 +25,22 @@ namespace FireControlApp
             FadeGlow = false;
             IsDrawBorder = true;
             this.SortNo = SortNo;
-            myMenu = new CellContextMenu(
-                     new EventHandler(EditeItemClick),//编辑库位状态
-                     new EventHandler(ReflushClick),
-                     new EventHandler(ResetClick),
-                     new EventHandler(OutChangeClick),
-                     new EventHandler(OutUnloadClick),
-                     new EventHandler(OutFinishClick),
-                     new EventHandler(InFinishClick)
-                     );
+
+            var evModel = new CellEvent
+            {
+                EditCellClick = new EventHandler(EditeItemClick),//编辑库位状态
+                EditReflushClick = new EventHandler(ReflushClick),
+                ResetClick = new EventHandler(ResetClick),
+                OutChangeClick = new EventHandler(OutChangeClick),
+                OutUnloadClick = new EventHandler(OutUnloadClick),
+                OutFinishClick = new EventHandler(OutFinishClick),
+                InFinishClick = new EventHandler(InFinishClick),
+                BackNormalClick = new EventHandler(BackNormalClick),
+                CancelSprayClick = new EventHandler(CancelSprayClick),
+                DoSprayClick = new EventHandler(DoSprayClick),
+                StopSprayClick = new EventHandler(StopSprayClick)
+            };
+            myMenu = new CellContextMenu(evModel);
             this.ContextMenuStrip = myMenu.contextMenuStrip1;
             this.MouseUp += StandbyCell_MouseUp;
         }
@@ -45,14 +49,18 @@ namespace FireControlApp
         {
             if (e.Button == MouseButtons.Right)
             {
-                myMenu.EditCell.Enabled = this.CellNo >= 0;
-                myMenu.ReflushCell.Enabled = this.CellNo >= 0 && Status == DeviceStatus.Normal;
-                myMenu.ResetCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
-                myMenu.OutFinishByHand.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
-                myMenu.InFinishByHand.Enabled = this.CellNo >= 0 && Status == DeviceStatus.Normal;
+                //myMenu.EditCell.Enabled = this.CellNo >= 0;
+                //myMenu.ReflushCell.Enabled = this.CellNo >= 0 && Status == DeviceStatus.Normal;
+                //myMenu.ResetCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
+                //myMenu.OutFinishByHand.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
+                //myMenu.InFinishByHand.Enabled = this.CellNo >= 0 && Status == DeviceStatus.Normal;
+                //myMenu.OutChangeCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
+                //myMenu.OutUnloadCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
 
-                myMenu.OutChangeCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
-                myMenu.OutUnloadCell.Enabled = this.CellNo >= 0 && ControlMap.HasOneExecStatuses.Contains(Status);
+                myMenu.BackNormalCell.Enabled = this.CellNo >= 0 && Status != DeviceStatus.Normal;
+                myMenu.CancelSprayCell.Enabled = this.CellNo >= 0 && Status != DeviceStatus.Normal;
+                myMenu.DoSprayCell.Enabled = this.CellNo >= 0;
+                myMenu.StopSprayCell.Enabled = this.CellNo >= 0;
                 myMenu.contextMenuStrip1.Show(this, new Point(e.X, e.Y));
             }
         }
@@ -69,6 +77,16 @@ namespace FireControlApp
         public int CellNo { get; set; } = -1;
 
         /// <summary>
+        /// 库位位置
+        /// </summary>
+        public FirePost FirePost { get; set; }
+
+        /// <summary>
+        /// 库位属性描述
+        /// </summary>
+        public string PostDesc { get; set; }
+
+        /// <summary>
         /// 库位状态
         /// </summary>
         private DeviceStatus _status = DeviceStatus.Normal;
@@ -83,11 +101,16 @@ namespace FireControlApp
             {
                 if (value != _status)
                 {
+                    //喷淋的优先级是最高的，喷淋颜色只能恢复正常颜色
+                    if (_status == DeviceStatus.SprayByHand && value != DeviceStatus.Normal)
+                        return;
                     this.BaseColor(ControlMap.ColorMap[value]);
                     _status = value;
                 }
             }
         }
+
+        public string ActionDes { get; set; }
 
         /// <summary>
         /// 托盘编码
@@ -138,7 +161,7 @@ namespace FireControlApp
 
         #region 获取TipMsg
 
-        private StringBuilder sbVal = new StringBuilder();
+        //private StringBuilder sbVal = new StringBuilder();
 
         /// <summary>
         /// 获取提示框内容
@@ -148,17 +171,20 @@ namespace FireControlApp
         public static string GetTipMsg(FireCell thisCell)
         {
             //if (thisCell.CellNo < 0) return string.Empty;
-            thisCell.sbVal.Clear();
-            if(thisCell.CellNo >= 0)
-                thisCell.sbVal.Append($"MES编码：{thisCell.CellNo}");
-            thisCell.sbVal.Append($"\r\n行列层：{thisCell.RowVal}-{thisCell.ColVal}-{thisCell.LayVal}");
-            thisCell.sbVal.Append($"\r\n库位状态：{ControlMap.Descriptions[thisCell.Status]}");
-            if(!string.IsNullOrEmpty(thisCell.TrayCode))
-                thisCell.sbVal.Append($"\r\n托盘条码：{thisCell.TrayCode}");
+            StringBuilder sbVal = new StringBuilder();
+            if (thisCell.CellNo >= 0)
+                sbVal.Append($"MES编码：{thisCell.CellNo}");
+            sbVal.Append($"\r\n库位类型：{thisCell.PostDesc}");
+            sbVal.Append($"\r\n行列层：{thisCell.RowVal}-{thisCell.ColVal}-{thisCell.LayVal}");
+            sbVal.Append($"\r\n库位状态：{ControlMap.Descriptions[thisCell.Status]}");
+            if(!string.IsNullOrEmpty(thisCell.ActionDes))
+                sbVal.Append($"\r\n消防动作：{thisCell.ActionDes}");
+            if (!string.IsNullOrEmpty(thisCell.TrayCode))
+                sbVal.Append($"\r\n托盘条码：{thisCell.TrayCode}");
             if (!string.IsNullOrEmpty(thisCell.RemarkMsg))
-                thisCell.sbVal.Append($"\r\n状态详情：{thisCell.RemarkMsg}");
-            thisCell.sbVal.Append($"\r\n变更时间：{thisCell.LastUptDate}");
-            return thisCell.sbVal.ToString();
+                sbVal.Append($"\r\n备注信息：{thisCell.RemarkMsg}");
+            sbVal.Append($"\r\n变更时间：{thisCell.LastUptDate}");
+            return sbVal.ToString();
         }
 
         /// <summary>
@@ -166,17 +192,34 @@ namespace FireControlApp
         /// </summary>
         /// <param name="stage"></param>
         /// <param name="cell"></param>
-        public static void UpdateCell(FireCell oldVal, cell newVal, string trayCode = null)
+        public static void UpdateCell(FireCell oldVal, cell newVal, string trayCode = null, bool isInit = false)
         {
+            var postType = (FirePost)newVal.type;
+            oldVal.PostDesc = ControlMap.PostDescMap.ContainsKey(postType) ? ControlMap.PostDescMap[postType] : "未知";
             oldVal.TrayCode = trayCode;
             oldVal.CellNo = newVal.cell_id;
-            oldVal.PreStatus = oldVal.Status;
-            oldVal.Status = (DeviceStatus)newVal.cell_status;
             oldVal.LastUptDate = newVal.last_update_time;
             oldVal.RemarkMsg = newVal.remark;
+            oldVal.ActionDes = newVal.extend_field2;
+            //if (!isInit && oldVal.Status == (DeviceStatus)newVal.cell_status)
+            //    return;
+            
+            oldVal.PreStatus = oldVal.Status;
+            oldVal.Status = (DeviceStatus)newVal.cell_status;
             oldVal.TipMsg = GetTipMsg(oldVal);
         }
         
+        /// <summary>
+        /// 仅更新备注
+        /// </summary>
+        /// <param name="oldVal"></param>
+        /// <param name="remarkMsg"></param>
+        public static void OnlyUptRemark(FireCell oldVal, string remarkMsg)
+        {
+            oldVal.RemarkMsg = remarkMsg;
+            oldVal.TipMsg = GetTipMsg(oldVal);
+        }
+
         /// <summary>
         /// 恢复上一次状态
         /// </summary>
@@ -257,6 +300,34 @@ namespace FireControlApp
         private void InFinishClick(object sender, EventArgs e)
         {
             PublicDel.OnInFinish?.Invoke(this.CellNo);
+        }
+        #endregion
+
+        #region 恢复正常状态
+        private void BackNormalClick(object sender, EventArgs e)
+        {
+            PublicDel.BackNormal?.Invoke(this.CellNo, $"{RowVal}-{ColVal}-{LayVal}");
+        }
+        #endregion
+
+        #region 取消喷淋，永不会喷淋
+        private void CancelSprayClick(object sender, EventArgs e)
+        {
+            PublicDel.CancelSpray?.Invoke(this.CellNo, $"{RowVal}-{ColVal}-{LayVal}");
+        }
+        #endregion
+
+        #region 喷淋
+        private void DoSprayClick(object sender, EventArgs e)
+        {
+            PublicDel.DoSpray?.Invoke(this.CellNo, $"{RowVal}-{ColVal}-{LayVal}", this.FirePost);
+        }
+        #endregion
+
+        #region 停止喷淋过程
+        private void StopSprayClick(object sender, EventArgs e)
+        {
+            PublicDel.StopSpray?.Invoke(this.CellNo, $"{RowVal}-{ColVal}-{LayVal}", this.FirePost);
         }
         #endregion
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -6,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using BatMes.Client.Entity.batmes_client;
 using FireBusiness;
+using FireBusiness.Enums;
 using FireBusiness.Model;
 using FireBusiness.WCF;
 using MyControls;
@@ -91,47 +93,68 @@ namespace FireControlApp
             CORE.Instance.AbnormalExitEvent += Instance_AbnormalExitEvent;
             PublicDel.OnUpdateCellStatus += PublicDel_OnUpdateCellStatus;
             PublicDel.AutoUpdateCellStatus += PublicDel_AutoUpdateCellStatus;
-            PublicDel.OnReflushFile += PublicDel_OnReflushFileCell;
-            PublicDel.OnResetCell += PublicDel_OnResetCell;
-            PublicDel.OnOutChange += PublicDel_OutChange;
-            PublicDel.OnOutUnload += PublicDel_OutUnload;
+
+            PublicDel.BackNormal += PublicDel_OnBackNormal;
+            PublicDel.DoSpray += PublicDel_OnDoSpray;
+            PublicDel.CancelSpray += PublicDel_OnCancelSpray;
+            PublicDel.StopSpray += PublicDel_OnStopSpray;
         }
 
         /// <summary>
-        /// 手工更新工步文件
+        /// 恢复正常状态
         /// </summary>
         /// <param name="cellNo"></param>
-        private void PublicDel_OnReflushFileCell(int cellNo)
+        private void PublicDel_OnBackNormal(int cellNo, string rclVal)
         {
-            var isOk = MessageBox.Show("确定要更新工步文件吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
+            var isOk = MessageBox.Show($"库位编号{cellNo}，行列层{rclVal}，确定要恢复正常状态吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
             if (isOk == DialogResult.OK)
-                CoreBusiness.Hub.ReflushFileCell(cellNo);
-            //MessageBox.Show(opVal.strMsg);
+                CoreBusiness.Hub.OnBackNormal(cellNo);
         }
 
         /// <summary>
-        /// 手工复位
+        /// 手工喷淋
         /// </summary>
         /// <param name="cellNo"></param>
-        private void PublicDel_OnResetCell(int cellNo)
+        private void PublicDel_OnDoSpray(int cellNo, string rclVal, FirePost firePost)
         {
-            var isOk = MessageBox.Show("确定要复位库位吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
-            if(isOk == DialogResult.OK)
-                CoreBusiness.Hub.ResetCell(cellNo);
+            if (ControlMap.NeedPassWord)
+            {
+                InputPswForm inputPsw = new InputPswForm()
+                {
+                    StartPosition = FormStartPosition.CenterScreen
+                };
+                inputPsw.ShowDialog();
+                if (!inputPsw.IsOk)
+                {
+                    return;
+                }
+            }
+            
+            var isOk = MessageBox.Show($"库位编号{cellNo}，行列层{rclVal}，确定要喷淋吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
+            if (isOk == DialogResult.OK)
+                CoreBusiness.Hub.OnDoSpray(cellNo, firePost);
         }
 
-        private void PublicDel_OutChange(int cellNo)
+        /// <summary>
+        /// 手工取消喷淋
+        /// </summary>
+        /// <param name="cellNo"></param>
+        private void PublicDel_OnCancelSpray(int cellNo, string rclVal)
         {
-            var isOk = MessageBox.Show("确定要换库位吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
+            var isOk = MessageBox.Show($"库位编号{cellNo}，行列层{rclVal}，确定要取消喷淋吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
             if (isOk == DialogResult.OK)
-                CoreBusiness.Hub.OutChangeByHand(cellNo);
+                CoreBusiness.Hub.OnCancelSpray(cellNo);
         }
 
-        private void PublicDel_OutUnload(int cellNo)
+        /// <summary>
+        /// 喷淋过程中停止喷淋
+        /// </summary>
+        /// <param name="cellNo"></param>
+        private void PublicDel_OnStopSpray(int cellNo, string rclVal, FirePost firePost)
         {
-            var isOk = MessageBox.Show("确定要出盘吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
+            var isOk = MessageBox.Show($"库位编号{cellNo}，行列层{rclVal}，确定停止喷淋吗？", "警告", MessageBoxButtons.OKCancel, MessageBoxIcon.Exclamation);
             if (isOk == DialogResult.OK)
-                CoreBusiness.Hub.OutUploadByHand(cellNo);
+                CoreBusiness.Hub.OnStopSpray(cellNo, firePost);
         }
 
         private void PublicDel_OnUpdateCellStatus(cell objCell)
@@ -139,7 +162,7 @@ namespace FireControlApp
             var hasMsg = CoreBusiness.Hub.UptCellStatusByHand(objCell);
             if (!hasMsg.isOk)
             {
-                var rclVal = string.Format(ControlMap.RclKey, objCell.row, objCell.col, objCell.lay);
+                var rclVal = string.Format(ControlMap.RclKey, objCell.type, objCell.row, objCell.col, objCell.lay);
                 if (cellKeyValues.ContainsKey(rclVal))
                 {
                     FireCell.ResetStatus(cellKeyValues[rclVal]);
@@ -148,12 +171,15 @@ namespace FireControlApp
             }
         }
 
-        private void PublicDel_AutoUpdateCellStatus(cell objCell, string trayCode)
+        private void PublicDel_AutoUpdateCellStatus(cell objCell, string remarkCode)
         {
-            var rclVal = string.Format(ControlMap.RclKey, objCell.row, objCell.col, objCell.lay);
+            var rclVal = string.Format(ControlMap.RclKey, objCell.type, objCell.row, objCell.col, objCell.lay);
             if (cellKeyValues.ContainsKey(rclVal))
             {
-                FireCell.UpdateCell(cellKeyValues[rclVal], objCell, trayCode);
+                if(!string.IsNullOrEmpty(remarkCode))
+                    FireCell.OnlyUptRemark(cellKeyValues[rclVal], remarkCode);
+                else
+                    FireCell.UpdateCell(cellKeyValues[rclVal], objCell, remarkCode);
             }
         }
 
@@ -185,16 +211,41 @@ namespace FireControlApp
         public void AutoScreen()
         {
             this.panMain.Size = new Size(
-                BatMes.Client.Controls.Tools.ScreenWidth - 20 * 2,
-                BatMes.Client.Controls.Tools.ScreenHeight - BatMes.Client.Controls.Tools.TOP_HEIGHT - BatMes.Client.Controls.Tools.BOTTOM_HEIGHT - 20 * 2);
+                BatMes.Client.Controls.Tools.ScreenWidth - 0 * 1,
+                BatMes.Client.Controls.Tools.ScreenHeight - BatMes.Client.Controls.Tools.TOP_HEIGHT - BatMes.Client.Controls.Tools.BOTTOM_HEIGHT - 0 * 1);
 
+            //常温静置
+            this.gBox_FcS.Width = this.panMain.Width - 10;
+            this.gBox_FcS.Location = new Point(statusIndicator.Location.X, statusIndicator.Height + 10);
+            var sAverHight = (gBox_FcS.Height - 40) / 2;
+            this.tabLine_FcS1.Width = this.panMain.Width - 20;
+            this.tabLine_FcS1.Location = new Point(tabLine_FcS1.Location.X, gBox_FcS.Location.Y - 10);
+            this.tabLine_FcS1.Height = sAverHight;
+            this.tabLine_FcS2.Width = this.panMain.Width - 20;
+            this.tabLine_FcS2.Location = new Point(tabLine_FcS1.Location.X, tabLine_FcS1.Location.Y + tabLine_FcS1.Height + 10);
+            this.tabLine_FcS2.Height = sAverHight;
 
-            this.tabLine_1.Width = this.panMain.Width - 20;
-            this.tabLine_1.Location = new Point(tabLine_1.Location.X, statusIndicator.Height + 10);
+            //分容压床
+            this.gBox_Fc.Width = this.panMain.Width - 10;
+            //this.gBox_Fc.Location = new Point(gBox_FcS.Location.X, gBox_FcS.Location.Y + gBox_FcS.Height + 10);
+            this.tabLine_Fc.Width = this.panMain.Width - 20;
+            //this.tabLine_Fc.Location = new Point(tabLine_FcS1.Location.X, gBox_Fc.Location.Y - 10);
 
-            this.realLog.Height = panMain.Height - this.tabLine_1.Height - statusIndicator.Height - 20;
+            ////高温静置
+            this.gBox_Hot.Width = this.panMain.Width - 10;
+            //this.gBox_Hot.Location = new Point(gBox_Fc.Location.X, gBox_Fc.Location.Y + gBox_Fc.Height + 10);
+            var hAverHight = (gBox_FcS.Height - 40) / 2;
+            this.tabLine_Hot1.Width = this.panMain.Width - 20;
+            this.tabLine_Hot1.Height = hAverHight;
+            //this.tabLine_Hot1.Location = new Point(tabLine_FcS1.Location.X, tabLine_Fc.Location.Y + tabLine_Fc.Height + 10);
+            this.tabLine_Hot2.Width = this.panMain.Width - 20;
+            this.tabLine_Hot2.Height = hAverHight;
+            this.tabLine_Hot2.Location = new Point(tabLine_FcS1.Location.X, tabLine_Hot1.Location.Y + tabLine_Hot1.Height + 10);
+
+            //日志
+            this.realLog.Height = panMain.Height - (gBox_Hot.Location.Y + gBox_Hot.Height) - 10;
             this.realLog.Width = this.panMain.Width;
-            this.realLog.Location = new Point(tabLine_1.Location.X, tabLine_1.Location.Y + tabLine_1.Height + 10);
+            this.realLog.Location = new Point(tabLine_FcS1.Location.X, gBox_Hot.Location.Y + gBox_Hot.Height + 10);
         }
 
         #region 绘制生产线
@@ -203,7 +254,11 @@ namespace FireControlApp
         /// </summary>
         private void DrawLine()
         {
-            LoadLine(1, tabLine_1);
+            LoadLine(1, tabLine_FcS1, FirePost.FcStandby);
+            LoadLine(2, tabLine_FcS2, FirePost.FcStandby);
+            LoadLine(1, tabLine_Fc, FirePost.Fc, false);
+            LoadLine(1, tabLine_Hot1, FirePost.HotStandby);
+            LoadLine(2, tabLine_Hot2, FirePost.HotStandby);
 
             //异步获取所有库位信息
             List<cell> initCell = CoreBusiness.GreatHub().GetCellsAsync();
@@ -211,66 +266,53 @@ namespace FireControlApp
             {
                 foreach (var hasCell in initCell)
                 {
-                    var rclVal = $"{hasCell.row}-{hasCell.col}-{hasCell.lay}";
+                    var rclVal = $"{hasCell.type}-{hasCell.row}-{hasCell.col}-{hasCell.lay}";
                     if (cellKeyValues.ContainsKey(rclVal))
                     {
                         var standCell = cellKeyValues[rclVal];
-                        FireCell.UpdateCell(standCell, hasCell);
+                        FireCell.UpdateCell(standCell, hasCell, null, true);
                     }
                 }
             });
         }
         //库位控件集合
-        private Dictionary<string, FireCell> cellKeyValues = new Dictionary<string, FireCell>();
+        private ConcurrentDictionary<string, FireCell> cellKeyValues = new ConcurrentDictionary<string, FireCell>();
+
 
         /// <summary>
         /// 加载生产线
         /// </summary>
-        /// <param name="lineId"></param>
-        /// <param name="parent"></param>
-        private void LoadLine(int lineId, MyTableLayoutPanel parent)
+        /// <param name="rowId">行</param>
+        /// <param name="parent">控件</param>
+        /// <param name="firePost">位置</param>
+        /// <param name="isReverse">是否倒序显示</param>
+        private void LoadLine(int rowId, MyTableLayoutPanel parent, FirePost firePost, bool isReverse = true)
         {
-            var hasCol = lineId == 1 ? ControlMap.ColCountLine_1 : ControlMap.ColCountLine_2;
-            Label visable = new Label
-            {
-                Text = " ",
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Fill,
-                Font = ControlMap.indicatorFont
-            };
-            parent.Controls.Add(visable);
-            for (int col = 1; col <= hasCol; col++)
-            {
-                Label titLab = new Label()
-                {
-                    Text = $"第{col}列",
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = ControlMap.indicatorFont
-                };
-                parent.Controls.Add(titLab);
-            }
-            var hasRow = lineId == 1 ? ControlMap.RowCountLine_1 : ControlMap.RowCountLine_2;
+            var hasCol = ControlMap.PostCountMap.ContainsKey((firePost, rowId)) ? ControlMap.PostCountMap[(firePost, rowId)].colVal : 0;
+            var hasRow = ControlMap.PostCountMap.ContainsKey((firePost, rowId)) ? ControlMap.PostCountMap[(firePost, rowId)].rowVal : 0;
+            var filterCell = ControlMap.NoOpenVal.Split(',');
             for (int row = hasRow; row >= 1; row--)
             {
-                Label layerLab = new Label()
-                {
-                    Text = $"第{row}层",
-                    TextAlign = ContentAlignment.MiddleCenter,
-                    Dock = DockStyle.Fill,
-                    Font = ControlMap.indicatorFont
-                };
-                parent.Controls.Add(layerLab);
-                for (int col = 1; col <= hasCol; col++)
-                {
-                    var rclVal = string.Format(ControlMap.RclKey, lineId, col, row);
+                var col = isReverse ? hasCol : 1;
+                while(col >= 1 && col <= hasCol)
+                {   
+                    //过滤不显示的库位
+                    var rclVal = string.Format(ControlMap.RclKey, (int)firePost, rowId, col, row);
+                    if(filterCell.Any(t => rclVal.StartsWith(t)))
+                    {
+                        Label emptyLab = new Label();
+                        parent.Controls.Add(emptyLab);
+                        col = isReverse ? (col - 1) : (col + 1);
+                        continue;
+                    }
                     FireCell newCell = new FireCell(this, rclVal)
                     {
-                        RowVal = lineId,
+                        RowVal = rowId,
                         ColVal = col,
                         LayVal = row,
+                        FirePost = firePost,
+                        PostDesc = ControlMap.PostDescMap.ContainsKey(firePost) ? ControlMap.PostDescMap[firePost] : "未知",
                         BaseColor = ControlMap.baseColor,
-                        Text = col + "-" + row,
                         IsDrawGlass = false,
                         InnerBorderColor = Color.Transparent,
                         BorderColor = ControlMap.borderColor,
@@ -280,9 +322,12 @@ namespace FireControlApp
                         RoundStyle = CCWin.SkinClass.RoundStyle.All,
                         MouseBaseColor = Color.Gainsboro
                     };
+                    newCell.Text = firePost == FirePost.Fc ? col + "-" + row : rowId + "-" + col + "-" + row;
+                    newCell.Font = new Font("微软雅黑", 5, FontStyle.Bold);
                     newCell.TipMsg = FireCell.GetTipMsg(newCell);
                     parent.Controls.Add(newCell);
                     cellKeyValues[rclVal] = newCell;
+                    col = isReverse ? (col - 1) : (col + 1);
                 }
             }
         }

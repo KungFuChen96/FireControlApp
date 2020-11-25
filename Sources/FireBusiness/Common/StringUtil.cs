@@ -1,5 +1,7 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections;
+using System.Text;
 
 namespace FireBusiness
 {
@@ -30,17 +32,6 @@ namespace FireBusiness
         }
 
         /// <summary>
-        /// 字符串转Int
-        /// </summary>
-        /// <param name="objValue"></param>
-        /// <returns></returns>
-        public static int ToInt32(this string objValue)
-        {
-            var opFlag = int.TryParse(objValue, out int opValue);
-            return opFlag ? opValue : default;
-        }
-
-        /// <summary>
         /// 实现深复制
         /// </summary>
         /// <typeparam name="T"></typeparam>
@@ -54,12 +45,22 @@ namespace FireBusiness
             return JsonConvert.DeserializeObject<T>(JsonConvert.SerializeObject(source), deserializeSettings);
         }
 
-        //public static void ForEach<T>(this IEnumerable<T> collection, Action<T> act)
-        //{
-        //    foreach (var item in collection)
-        //    {
-        //        act(item);
-        //    }
-        //}
+        /// <summary>
+        /// 获取异常规范化信息
+        /// </summary>
+        /// <param name="ex"></param>
+        /// <returns></returns>
+        public static string GetExceptionMsg(this Exception ex)
+        {
+            StringBuilder sb = new StringBuilder();
+            if (ex != null)
+            {
+                sb.Append(" 【异常类型】：" + ex.GetType().Name);
+                sb.Append(" 【异常信息】：" + ex.Message);
+                sb.Append(" 【堆栈调用】：" + ex.StackTrace);
+                sb.Append(" 【异常方法】：" + ex.TargetSite);
+            }
+            return sb.ToString();
+        }
     }
 }

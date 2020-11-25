@@ -2,16 +2,14 @@
 using BatMes.Client.Entity.batmes_client;
 using FireBusiness.Dev;
 using FireBusiness.Enums;
-using FireBusiness.IntervalJob;
 using FireBusiness.Model;
 using FireBusiness.OutSystem;
-using FireBusiness.Quartz;
-using ExtFuncs;
-using Neware.BTS.Service;
-using Quartz;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace FireBusiness
@@ -26,11 +24,6 @@ namespace FireBusiness
         /// <summary>
         /// 创建实例
         /// </summary>
-        /// <param name="socketAddress"></param>
-        /// <param name="port"></param>
-        /// <param name="isNotifyTemp"></param>
-        /// <param name="totalCells"></param>
-        /// <param name="waterCells"></param>
         /// <returns></returns>
         public static CoreBusiness GreatHub()
         {
@@ -49,15 +42,56 @@ namespace FireBusiness
 
         #region 公共
         /// <summary>
-        /// 在初始化完成后，开始做
+        /// 初始化操作
         /// </summary>
         public void StartTaskWhenInit()
         {
+            //订阅事件
+            PublicDel.AutoGetTempByStandby += AutoGetTempByStandby;
+
             InitDeviceStatus();
             CellIdMapToBTS();
-            CellIdMapToMES();
             InitFireCheck();
-            HasNoComplete();
+        }
+
+        /// <summary>
+        /// 实时获取静置架的温度
+        /// </summary>
+        /// <param name="cellNo"></param>
+        /// <param name="tempVal"></param>
+        public void AutoGetTempByStandby(int cellNo, decimal tempVal)
+        {
+            try
+            {
+                //OnlyUptCellTemp(cellNo, tempVal);
+                var postType = GetPostByCell(cellNo);
+                if (postType == FirePost.Unknown)
+                    return;
+                var (tempAction, tempWarn) = KvTempPost[postType];
+                if (tempVal >= tempWarn)
+                {
+                    var actionVal = BatMes.Enums.DeviceFireMode.None;
+                    var newCol = new FireControlModel
+                    {
+                        CellNo = cellNo,
+                        FirePost = postType,
+                        DeviceStatus = DeviceStatus.TempAnomaly,
+                        FireAction = ChnageActionType(actionVal),
+                        WithoutByHand = Configs.AutoMinByStandby,
+                        DevTemp = tempVal
+                    };
+                    AddOrUpdateCol(newCol.CellNo, newCol);
+                    //放到最后通知MES，以提升响应性能
+                    if (postType == FirePost.Fc)
+                        MesManager.Instance.CallFireTempByFc(cellNo, tempVal);
+                    else
+                        MesManager.Instance.CallFireTempByStandby(cellNo, tempVal);
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+            }
         }
 
         #endregion
@@ -66,194 +100,146 @@ namespace FireBusiness
         /// <summary>
         /// 本地调试模式
         /// </summary>
-        public bool IsDebug => Business.Instance.SysPara<bool>("IsDebug");
-
+        public bool IsDebug => CORE.Instance.SysPara<bool>("IsDebug");
 
         /// <summary>
-        /// 工步文件存放类型
+        /// 开启调式模式下，是否要开启模拟喷淋，若有火警信号
         /// </summary>
-        public int OpsFileType => Business.Instance.SysPara<int>("OpsFileType");
+        public bool IsSimSpray => CORE.Instance.SysPara<bool>("IsSimSpray");
 
         /// <summary>
-        /// 当前工序
+        /// 运行标志
         /// </summary>
-        public int MesOpsValue => Business.Instance.SysPara<int>("CurrentProcesses");
+        private bool IsRunning { get; set; } = true; 
 
         /// <summary>
-        /// 过程状态描述
+        /// 是否需要初始化库位
+        /// </summary>
+        private bool NeedInitCell => CORE.Instance.SysPara<bool>("NeedInitCell");
+
+        /// <summary>
+        /// 若发生火警，无人工多久自动执行消防
+        /// </summary>
+        private int WithoutByHand => CORE.Instance.SysPara<int>("WithoutByHand");
+
+        /// <summary>
+        /// 库位ID映射库位位置
+        /// </summary>
+        private ConcurrentDictionary<int, cell> KvCellMap { get; set; } = new ConcurrentDictionary<int, cell>();
+
+        /// <summary>
+        /// MES上配置的温度阈值 KEY:位置 VALUE:（执行温度, 告警温度）
+        /// </summary>
+        private ConcurrentDictionary<FirePost, (decimal FireActTemp, decimal FireWarnTemp)> KvTempPost;
+
+        /// <summary>
+        /// 消防执行队列
+        /// </summary>
+        private ConcurrentDictionary<int, FireControlModel> KvHasControl { get; set; } = new ConcurrentDictionary<int, FireControlModel>();
+
+        /// <summary>
+        /// 状态描述映射
         /// </summary>
         private readonly Dictionary<DeviceStatus, string> StatusMap = new Dictionary<DeviceStatus, string>
         {
             {DeviceStatus.Normal, "正常"},
             {DeviceStatus.TempAnomaly, "温度异常"},
-            {DeviceStatus.FireAlarm, "烟雾警告"},
+            {DeviceStatus.FireAlarm, "烟雾告警"},
             {DeviceStatus.Fault, "设备故障"},
             {DeviceStatus.OtherEx, "其他异常"}
         };
-        #endregion
-
-        #region 业务逻辑
-
-        #endregion
-
-        #region 托盘模型
-        /// <summary>
-        /// 获取托盘模型
-        /// </summary>
-        public List<TrayModel> TrayModels { get; } = new List<TrayModel>();
 
         /// <summary>
-        /// 新增一个托盘模型
+        /// 执行动作描述
         /// </summary>
-        /// <param name="trayModel"></param>
-        public void AddTrayModel(TrayModel trayModel)
+        private readonly Dictionary<FireAction, string> ActionDesMap = new Dictionary<FireAction, string>
         {
-            if (trayModel.IsEmpty())
-                return;
-            TrayModels.RemoveAll(t => t.TrayCode == trayModel.TrayCode || t.CellID == trayModel.CellID);
-            TrayModels.Add(trayModel);
-            //持久化
-            var insertMap = new tray_map
+            {FireAction.Nothing, "无"},
+            {FireAction.Spray, "喷淋"},
+            {FireAction.WaterSpray, "喷水"},
+            {FireAction.Other, "其他"},
+        };
+        #endregion
+
+        #region 操作变量
+        /// <summary>
+        /// 新增或更新消防控制键值对
+        /// </summary>
+        /// <param name="cellID"></param>
+        /// <param name="fireControl"></param>
+        private void AddOrUpdateCol(int cellID, FireControlModel fireCol)
+        {
+            var hasCol = KvHasControl.ContainsKey(cellID) ? KvHasControl[cellID] : default;
+            if (hasCol == null)
             {
-                tray_code = trayModel.TrayCode,
-                cell_id = trayModel.CellID,
-                processes = trayModel.OpsValue,
-                exec_status = (int)DeviceStatus.Normal,
-                type = (int)trayModel.TrayAttr,
-                last_update_time = DateTime.Now,
-                mes_model = trayModel.JsonEncode()
-            };
-            Business.Instance.AddTrayMap(insertMap);
-            UptCellNotityUi(trayModel.CellID, trayModel.TrayCode, DeviceStatus.Normal, trayModel.TrayAttr, true);
-        }
-
-        /// <summary>
-        /// 删除指定模型(或不启用)
-        /// </summary>
-        /// <param name="trayModel"></param>
-        /// <param name="isDelete"></param>
-        public void RemoveTray(TrayModel trayModel, bool isDelete = true)
-        {
-            if (trayModel.IsEmpty())
-                return;
-            if(isDelete)
-                TrayModels.RemoveAll(t => t.TrayCode == trayModel.TrayCode);
+                KvHasControl.TryAdd(cellID, fireCol);
+            }
             else
             {
-                var hasOne = TrayModels.Where(t => t.TrayCode == trayModel.TrayCode).FirstOrDefault();
-                if (hasOne != null)
-                    hasOne.Enabled = false;
-            }
-        }
-
-        /// <summary>
-        /// 获取指定的托盘模型
-        /// </summary>
-        /// <param name="trayCode"></param>
-        /// <returns></returns>
-        public TrayModel GetTrayModel(string trayCode, int? CellID = null)
-        {
-            if (trayCode.IsEmpty())
-                return default;
-            var hasCache = TrayModels.Where(t => t.TrayCode == trayCode && t.Enabled).OrderByDescending(t => t.CreateTime).FirstOrDefault();
-            if (hasCache != null)
-                return hasCache;
-            var hasAccess = Business.Instance.GetTrayMap(trayCode, CellID);
-            return (hasAccess?.mes_model).JsonDecode<TrayModel>();
-        }
-
-        /// <summary>
-        /// 根据库位ID获取托盘模型
-        /// </summary>
-        /// <param name="Cell"></param>
-        /// <returns></returns>
-        public TrayModel GetTrayModelByCell(int cellID)
-        {
-            var hasCache = TrayModels.Where(t => t.CellID == cellID && t.Enabled).OrderByDescending(t => t.CreateTime).FirstOrDefault();
-            if (hasCache != null)
-                return hasCache;
-            var hasAccess = Business.Instance.GetTrayMapByCell(cellID);
-            return (hasAccess?.mes_model).JsonDecode<TrayModel>();
-        }
-        #endregion
-
-        #region 结果模型
-        /// <summary>
-        /// 获取托盘模型
-        /// </summary>
-        public List<MESResults> TestResults { get; } = new List<MESResults>();
-
-        /// <summary>
-        /// 新增结果模型
-        /// </summary>
-        /// <param name="testResults"></param>
-        private void AddTestResult(MESResults testResults)
-        {
-            if (testResults.IsEmpty())
-                return;
-            TestResults.RemoveAll(t => t.TrayCode == testResults.TrayCode || t.CellID == testResults.CellID);
-            TestResults.Add(testResults);
-            //持久化
-            var uptMap = new tray_map
-            {
-                tray_code = testResults.TrayCode,
-                cell_id = testResults.CellID,
-                processes = testResults.OpsValue,
-                exec_status = (int)DeviceStatus.Normal,
-                last_update_time = DateTime.Now,
-                bts_result = testResults.JsonEncode()
-            };
-            Business.Instance.UpdateTrayMap(uptMap);
-            UptCellNotityUi(testResults.CellID, testResults.TrayCode, DeviceStatus.Normal);
-        }
-
-        /// <summary>
-        /// 获取测试结果
-        /// </summary>
-        /// <param name="trayCode"></param>
-        /// <param name="cellID"></param>
-        /// <returns></returns>
-        private MESResults GetMESResults(string trayCode, int? cellID = null)
-        {
-            if (trayCode.IsEmpty())
-                return default;
-            var hasCache = TestResults.Where(t => t.TrayCode == trayCode).OrderByDescending(t => t.CreateTime).FirstOrDefault();
-            if (hasCache != null)
-                return hasCache;
-            var hasAccess = Business.Instance.GetTrayMap(trayCode, cellID);
-            return (hasAccess?.bts_result).JsonDecode<MESResults>();
-        }
-        #endregion
-
-        #region 持久化任务
-        /// <summary>
-        /// 将未完成的静置任务，接着初始化执行
-        /// </summary>
-        private void HasNoComplete()
-        {
-            var opRes = Business.Instance.GetInitStandTaskAsync();
-            var hasMany = opRes.Result;
-            if (!hasMany.IsEmpty() && hasMany.Any())
-            {
-                Task.Run(() =>
+                hasCol.FireAction = fireCol.FireAction;
+                hasCol.DeviceStatus = fireCol.DeviceStatus;
+                hasCol.LastUpdateTime = fireCol.CreateTime;
+                if(fireCol.TooHotCount > 0)
                 {
-                    hasMany.AsParallel().ForAll(t =>
-                    {
-                        var hasTask = Business.Instance.GetTrayMap(t.tray_code, t.cell_id);
-                        if (hasTask != null && hasTask.exec_status == (int)DeviceStatus.Normal)
-                        {
-                            var jobKey = string.Format(Configs.jobKey, t.tray_code, t.processes, t.cell_id);
-                            var showMsg = string.Format(Configs.preTitle, t.tray_code, t.processes, t.cell_id) + $"重新加入到上传MES队列中...";
-                            CORE.Instance.OnMessage(showMsg, BatMes.Client.Enums.SysEventLevel.Info);
-                        }
-                    });
-                });
+                    hasCol.TooHotCount = fireCol.TooHotCount;
+                }
+
+                if (fireCol.CellHasSmoke)
+                {
+                    hasCol.CellHasSmoke = fireCol.CellHasSmoke;
+                }
+
+                if(fireCol.FirePost == FirePost.Fc && hasCol.TooHotCount > 0)
+                {
+                    hasCol.FireAction = ((hasCol.CellHasSmoke && hasCol.TooHotCount >= Configs.FcHasFireTooHighCount) || hasCol.TooHotCount >= Configs.FcTempTooHighCount) ? FireAction.Spray : FireAction.Nothing;
+                }
+                //KvHasControl.AddOrUpdate(cellID, hasCol, (oldVal, newVal) => hasCol);
+            }
+            RemarkAndStatusToUI(cellID, fireCol.DeviceStatus, hasCol.FireAction, fireCol.DevTemp, "库位有告警");
+            LogManager.Info(GetLogMsg(fireCol));
+
+            //定制化需求，反馈行列层给PLC
+            if (fireCol.DeviceStatus == DeviceStatus.FireAlarm)
+            {
+                var hasCell = KvCellMap.ContainsKey(cellID) ? KvCellMap[cellID] : default;
+                if (hasCell != null)
+                    DEV.Instance.FeedbackRcl(fireCol.FirePost, false, (ushort)hasCell.row.Value, (ushort)hasCell.col.Value, (ushort)hasCell.lay.Value);
+            }
+            //定制化需求：打开喇叭
+            if (fireCol.DeviceStatus == DeviceStatus.FireAlarm || fireCol.DeviceStatus == DeviceStatus.TempAnomaly)
+            {
+                DEV.Instance.OpenSpeaker(fireCol.FirePost);
+
+                //定制化需求，压床有火警则弹开
+                if (fireCol.FirePost == FirePost.Fc)
+                {
+                    DEV.Instance.FcCellOffOrProtect(cellID, SignalType.W_DoBrakeUp);
+                }
             }
         }
-        #endregion
 
-        #region 校验
+        /// <summary>
+        /// 移除控制模型
+        /// </summary>
+        /// <param name="cellID"></param>
+        private FireControlModel RemoveCol(int cellID)
+        {
+            KvHasControl.TryRemove(cellID, out FireControlModel outCol);
+            return outCol;
+        }
 
+        /// <summary>
+        /// 初始化库位ID映射库位位置
+        /// </summary>
+        private void InitPostMap()
+        {
+            KvCellMap = KvCellMap ?? new ConcurrentDictionary<int, cell>();
+            var cellList = Business.Instance.GetCellsAsync()?.Result;
+            cellList?.ForEach(t =>
+            {
+                KvCellMap.TryAdd(t.cell_id, t);
+            });
+        }
         #endregion
 
         #region 初始化库位映射
@@ -268,36 +254,16 @@ namespace FireBusiness
             {
                 CORE.Instance.OnMessage(status.Value.Message, status.Value.IsOpen ? BatMes.Client.Enums.SysEventLevel.Info : BatMes.Client.Enums.SysEventLevel.Error);
             }
-        }
-        /// <summary>
-        /// 本地库位ID => MES库位ID
-        /// </summary>
-        public Dictionary<string, int> ToMESCellMap { get; set; } = new Dictionary<string, int>();
-
-        private void CellIdMapToMES()
-        {
-            try
+            if(deviceStatus.Where(t => !t.Value.IsOpen).Any())
             {
-                string hasPath = AppDomain.CurrentDomain.BaseDirectory + "CellMap\\CellMapToMES.json";
-                string hasValue = System.IO.File.ReadAllText(hasPath);
-                ToMESCellMap = hasValue.JsonDecode<Dictionary<string, int>>();
-            }
-            catch (Exception)
-            {
-                var showMsg = $"获取库位映射关系失败，找不到CellMapToMES.json文件。";
-                CORE.Instance.OnMessage(showMsg, BatMes.Client.Enums.SysEventLevel.Error);
+                CORE.Instance.OnMessage($"有PLC连接失败，请根据日志检查。", BatMes.Client.Enums.SysEventLevel.Error);
             }
         }
 
         /// <summary>
         /// MES 库位ID => （BTS\PLC）本地库位库位ID
         /// </summary>
-        public Dictionary<int, int> ToLocalCellMap { get; set; } = new Dictionary<int, int>();
-
-        /// <summary>
-        /// Plc => MES 库位映射
-        /// </summary>
-        public Dictionary<int, int> PlcToMes { get; set; } = new Dictionary<int, int>();
+        private Dictionary<int, int> ToLocalCellMap { get; set; } = new Dictionary<int, int>();
 
         /// <summary>
         /// MES 库位ID => （BTS\PLC）本地库位库位ID
@@ -309,7 +275,6 @@ namespace FireBusiness
                 string hasPath = AppDomain.CurrentDomain.BaseDirectory + "CellMap\\CellMapToBTS.json";
                 string hasValue = System.IO.File.ReadAllText(hasPath);
                 ToLocalCellMap = hasValue.JsonDecode<Dictionary<int, int>>();
-                PlcToMes = ToLocalCellMap.ToDictionary(kv => kv.Value, kv => kv.Key);
             }
             catch (Exception)
             {
@@ -319,261 +284,584 @@ namespace FireBusiness
         }
 
         /// <summary>
-        /// MES的库位ID => 本地库位ID
+        /// 初始化库位
         /// </summary>
-        /// <param name="cellID"></param>
-        /// <returns></returns>
-        private int GetCellForPLC(int cellID)
+        /// <typeparam name="T"></typeparam>
+        /// <param name="Cells"></param>
+        /// <param name="postType"></param>
+        private void InitCell<T>(IList<T> Cells, int postType)
         {
-            if (!ToLocalCellMap.ContainsKey(cellID))
+            if (Cells == null || !NeedInitCell) 
+                return;
+            if (typeof(T) == typeof(BatMes.Service.Model.Standby.CellInfo))
             {
-                var showMsg = $"MES库位【{cellID}】，找不到对应本地的库位，请检查配置是否有误。";
-                CORE.Instance.OnMessage(showMsg, BatMes.Client.Enums.SysEventLevel.Error);
-                return -1;
+                var myCell = Cells as IList<BatMes.Service.Model.Standby.CellInfo>;
+                myCell.AsParallel().ForAll(t => 
+                {
+                    var newCell = new cell
+                    {
+                        cell_id = t.CellID,
+                        cell_status = (int)DeviceStatus.Normal,
+                        last_update_time = DateTime.Now,
+                        type = postType,
+                        row = t.PhyRow,
+                        col = t.PhyCol,
+                        lay = t.PhyLayer,
+                        extend_field1 = t.FireCode
+                    };
+                    Business.Instance.AddCell(newCell);
+                });
             }
-            return ToLocalCellMap[cellID];
-        }
-
-        /// <summary>
-        /// PLC对应的库位ID => MES库位ID
-        /// </summary>
-        /// <param name="cellID"></param>
-        /// <returns></returns>
-        private int PlcCellToMes(int cellID)
-        {
-            return PlcToMes.ContainsKey(cellID) ? PlcToMes[cellID] : -1;
+            else if (typeof(T) == typeof(BatMes.Service.Model.Fc.CellInfo))
+            {
+                var myCell = Cells as IList<BatMes.Service.Model.Fc.CellInfo>;
+                myCell.AsParallel().ForAll(t =>
+                {
+                    var newCell = new cell
+                    {
+                        cell_id = t.CellID,
+                        cell_status = (int)DeviceStatus.Normal,
+                        last_update_time = DateTime.Now,
+                        type = postType,
+                        row = t.PhyRow,
+                        col = t.PhyCol,
+                        lay = t.PhyLayer,
+                        extend_field1 = t.MakerCode
+                    };
+                    Business.Instance.AddCell(newCell);
+                });
+            }
         }
         #endregion
 
-        #region 扩展方法
-        
-        #endregion
-
-        #region 消防/故障
-        /// <summary>
-        /// 消防描述
-        /// </summary>
-        private Dictionary<ErrorType, string> faultMap = new Dictionary<ErrorType, string>
-        {
-            {ErrorType.Ok, "程序正常"},
-            {ErrorType.FalutStop, "设备故障停机"},
-            {ErrorType.Byhand, "压床处于手动状态"},
-            {ErrorType.Scram, "压床急停中"},
-            {ErrorType.Reverse, "压床料盘反向放置"},
-            {ErrorType.ValveFailure, "阀门故障"},
-            {ErrorType.ExcFailure, "电源工步执行失败"},
-            {ErrorType.FireAlarm, "压床火警报警"},
-            {ErrorType.YV1, "门YV1阀开关不到位故障"},
-            {ErrorType.YV2, "模组YV2阀开关不到位故障"},
-            {ErrorType.YV3, "定位YV3阀开关不到位故障"},
-            {ErrorType.YV4, "探针YV4阀开关不到位故障"},
-            {ErrorType.PreeWindFault, "压床风扇故障"},
-            {ErrorType.SpeedFault, "风道提速风扇故障"},
-            {ErrorType.WindLevelFault, "风道风扇故障"},
-        }; 
-
+        #region 消防
         /// <summary>
         /// 初始化消防检查
         /// </summary>
         private void InitFireCheck()
         {
-            GetFireSetByMes();
-            QuartzHelper.CommonAddJob<FireJob>(Configs.fireName, Configs.startFire, Configs.intervalFire);
-            QuartzHelper.CommonAddJob<FaultJob>(Configs.faultName, Configs.startFire, Configs.intervalFault);
-        }
+            IninKvByFile();
+            //方法一：用Quartz定时任务
+            //QuartzHelper.AddJob<FcStandbyJob>(Configs.FcStandyJob, Configs.StartTimeSeconds, Configs.IntervalInseconds);
+            //QuartzHelper.AddJob<FcJob>(Configs.FcJob, Configs.StartTimeSeconds, Configs.IntervalInseconds);
+            //QuartzHelper.AddJob<HotStandbyJob>(Configs.HotStandyJob, Configs.StartTimeSeconds, Configs.IntervalInseconds);
+            //QuartzHelper.AddJob<FireJob>(Configs.FireJob, Configs.StartTimeSeconds, Configs.IntervalInseconds);
 
-        /// <summary>
-        /// 消防判断动作
-        /// </summary>
-        public void DoFireHnadle()
-        {
-            if(Configs.IsOpenSmoke)
-                HasFireByLocal();
-        }
-
-        /// <summary>
-        /// 判断感光纤维
-        /// </summary>
-        public void DoFalutHandle() 
-        {
-            if(Configs.IsOpenMBus)
-                HasFireByModBus();
-        }
-
-        #region 故障
-        /// <summary>
-        /// 批量读取故障信号点
-        /// </summary>
-        /// <returns></returns>
-        private void HasFaultAnomaly()
-        {
-            var busRes = DEV.Instance.CommonReadByBulk(SignalType.R_FaultFlag);
-            if (busRes == null)
-                return;
-            var hasFault = GetFireModelsByFault(busRes);
-            hasFault?.ForEach(t =>
+            //方法二：用Task做多线程任务
+            Task.Run(() =>
             {
-                var showMsg = $"库位【{t.CellId}】提示有故障：{t.Message}";
-                CORE.Instance.OnMessage(showMsg, BatMes.Client.Enums.SysEventLevel.Warn);
+                while (true)
+                {
+                    if (IsRunning) FireHnadle();
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
             });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning) FcStandbyHandle();
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
+            });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning) FcHandle();
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
+            });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning) FcTempHandle();
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
+            });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning) HotStandbyHandle();
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
+            });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning)
+                    {
+                        ModbusHasFire();
+                        ModbusTempHandle();
+                    }
+                    Thread.Sleep(Configs.IntervalInMm);
+                }
+            });
+            Task.Run(() =>
+            {
+                while (true)
+                {
+                    if (IsRunning) HreatBit();
+                    Thread.Sleep(1000);
+                }
+            });
+        }
+
+        /// <summary>
+        /// 初始化键值对、初始化温度阈值
+        /// 新需求：温度条件不再读取MES配置值，在本地配置
+        /// </summary>
+        [Obsolete]
+        private void IninKvByMES()
+        {
+            //初始化键值对
+            KvHasControl = KvHasControl ?? new ConcurrentDictionary<int, FireControlModel>();
+            InitPostMap();
+
+            //初始化温度阈值键值对
+            var noNeed = 9999M;
+            KvTempPost = new ConcurrentDictionary<FirePost, (decimal FireActTemp, decimal FireWarnTemp)>();
+            KvTempPost.AddOrUpdate(FirePost.FcStandby, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+            KvTempPost.AddOrUpdate(FirePost.Fc, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+            KvTempPost.AddOrUpdate(FirePost.HotStandby, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+
+            //获取常温静置的温度阈值
+            var opFcStandby = MesManager.Instance.StoreListByStandby(Configs.FcStandbyRgvId);
+            if (opFcStandby != null && opFcStandby.Any())
+            {
+                var fcStandbyVal = (opFcStandby.First().FireActTemp, opFcStandby.First().FireWarnTemp);
+                if(fcStandbyVal.FireWarnTemp > 0)
+                    KvTempPost.AddOrUpdate(FirePost.FcStandby, fcStandbyVal, (oldkkey, oldVal) => fcStandbyVal);
+                foreach(var hasCell in opFcStandby.Where(t => !t.Name.IsEmpty() && t.Name.Contains("静置架")))
+                {
+                    InitCell(hasCell.Cells, (int)FirePost.FcStandby);
+                }
+            }
+
+            //获取分容压床的温度阈值
+            var opFc = MesManager.Instance.HostListByFc(Configs.FcRgvId);
+            if (opFc != null && opFc.Any())
+            {
+                var fcVal = (opFc.First().FireActTemp, opFc.First().FireWarnTemp);
+                if(fcVal.FireWarnTemp > 0)
+                    KvTempPost.AddOrUpdate(FirePost.Fc, fcVal, (oldkkey, oldVal) => fcVal);
+                //InitCell(opFc.First().Cells, (int)FirePost.Fc); --因MES的编码规则无效，故分容库位只能手工配置
+            }
+
+            //获取高温静置的温度阈值
+            var opHotStandby = MesManager.Instance.StoreListByStandby(Configs.HotStandbyRgvId);
+            if (opHotStandby != null && opHotStandby.Any())
+            {
+                var hotVal = (opHotStandby.First().FireActTemp, opHotStandby.First().FireWarnTemp);
+                if (hotVal.FireWarnTemp > 0)
+                    KvTempPost.AddOrUpdate(FirePost.HotStandby, hotVal, (oldkkey, oldVal) => hotVal);
+                foreach (var hasCell in opHotStandby.Where(t => !t.Name.IsEmpty() && t.Name.Contains("静置架")))
+                {
+                    InitCell(hasCell.Cells, (int)FirePost.HotStandby);
+                }
+            }
+            CORE.Instance.OnMessage("PLC初始化完成、获取设定温度完成，消防判断开始启动。", BatMes.Client.Enums.SysEventLevel.Info);
+        }
+
+        /// <summary>
+        /// 新需求：温度条件不再读取MES配置值，在本地配置
+        /// </summary>
+        private void IninKvByFile()
+        {
+            //初始化键值对
+            KvHasControl = KvHasControl ?? new ConcurrentDictionary<int, FireControlModel>();
+            InitPostMap();
+
+            //初始化温度阈值键值对
+            var noNeed = 9999M;
+            KvTempPost = new ConcurrentDictionary<FirePost, (decimal FireActTemp, decimal FireWarnTemp)>();
+            KvTempPost.AddOrUpdate(FirePost.FcStandby, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+            KvTempPost.AddOrUpdate(FirePost.Fc, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+            KvTempPost.AddOrUpdate(FirePost.HotStandby, (noNeed, noNeed), (oldkkey, oldVal) => (noNeed, noNeed));
+
+            Configs.FcStandbyHotTemp = Configs.FcStandbyHotTemp > 0 ? Configs.FcStandbyHotTemp : 70M;
+            Configs.FcHotTemp = Configs.FcHotTemp > 0 ? Configs.FcHotTemp : 70M;
+            Configs.HighStandbyHotTemp = Configs.HighStandbyHotTemp > 0 ? Configs.HighStandbyHotTemp : 70M;
+            if (Configs.FcStandbyHotTemp > 0)
+                KvTempPost.AddOrUpdate(FirePost.FcStandby, (Configs.FcStandbyHotTemp, Configs.FcStandbyHotTemp), (oldkkey, oldVal) => (Configs.FcStandbyHotTemp, Configs.FcStandbyHotTemp));
+            if(Configs.FcHotTemp > 0)
+                KvTempPost.AddOrUpdate(FirePost.Fc, (Configs.FcHotTemp, Configs.FcHotTemp), (oldkkey, oldVal) => (Configs.FcHotTemp, Configs.FcHotTemp));
+            if(Configs.HighStandbyHotTemp > 0)
+                KvTempPost.AddOrUpdate(FirePost.HotStandby, (Configs.HighStandbyHotTemp, Configs.HighStandbyHotTemp), (oldkkey, oldVal) => (Configs.HighStandbyHotTemp, Configs.HighStandbyHotTemp));
+
+            //静置区最低温度判断阈值
+            Configs.MinTempForStandby = Configs.FcStandbyHotTemp <= Configs.HighStandbyHotTemp ? Configs.FcStandbyHotTemp : Configs.HighStandbyHotTemp;
+
+            CORE.Instance.OnMessage($"常温静置架、分容压床、高温静置架的温度设置值分别为：{Configs.FcStandbyHotTemp}°C，{Configs.FcHotTemp}°C，{Configs.HighStandbyHotTemp}°C", BatMes.Client.Enums.SysEventLevel.Info);
+            CORE.Instance.OnMessage("PLC初始化完成、获取设定温度完成，消防判断开始启动。", BatMes.Client.Enums.SysEventLevel.Info);
+        }
+
+        #region 定时任务
+        /// <summary>
+        /// 消防执行动作
+        /// </summary>
+        public void FireHnadle()
+        {
+            try
+            {
+                if (KvHasControl.Any())
+                {
+                    KvHasControl.Values.AsParallel().ForAll(v =>
+                    {
+                        if(v.Enabled)
+                        {
+                            DoOutFire(v);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 常温静置烟雾判断任务
+        /// </summary>
+        public void FcStandbyHandle()
+        {
+            try
+            {
+                var hasMap = DEV.Instance.NoBulkGetVal<bool>(FirePost.FcStandby, SignalType.R_FcStandby);
+                if (!hasMap.IsEmpty())
+                {
+                    hasMap.AsParallel().ForAll(kv =>
+                    {
+                        if (kv.Value)
+                        {
+                            //var actionVal = MesManager.Instance.CallFireSmokeByStandby(kv.Key);
+                            var actionVal = BatMes.Enums.DeviceFireMode.None;
+                            var newCol = new FireControlModel
+                            {
+                                CellNo = kv.Key,
+                                FirePost = FirePost.FcStandby,
+                                DeviceStatus = DeviceStatus.FireAlarm,
+                                FireAction = ChnageActionType(actionVal),
+                                WithoutByHand = Configs.AutoMinByStandby
+                            };
+                            AddOrUpdateCol(newCol.CellNo, newCol);
+                            actionVal = MesManager.Instance.CallFireSmokeByStandby(kv.Key);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                //CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 分容压床烟雾判断任务
+        /// </summary>
+        public void FcHandle()
+        {
+            try
+            {
+                var hasMap = DEV.Instance.NoBulkGetVal<bool>(FirePost.Fc, SignalType.R_Fc);
+                if (!hasMap.IsEmpty())
+                {
+                    hasMap.AsParallel().ForAll(kv =>
+                    {
+                        if (kv.Value)
+                        {
+                            //var actionVal = MesManager.Instance.CallFireSmokeByFc(kv.Key);
+                            var actionVal = BatMes.Enums.DeviceFireMode.None;
+                            var newCol = new FireControlModel
+                            {
+                                CellNo = kv.Key,
+                                FirePost = FirePost.Fc,
+                                DeviceStatus = DeviceStatus.FireAlarm,
+                                FireAction = ChnageActionType(actionVal),
+                                CellHasSmoke = true,
+                                WithoutByHand = Configs.AutoMinByFc 
+                            };
+                            AddOrUpdateCol(newCol.CellNo, newCol);
+                            actionVal = MesManager.Instance.CallFireSmokeByFc(kv.Key);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                //CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 分容压床温度判断任务
+        /// 获取温度值改成超温点数 By 20201028
+        /// </summary>
+        public void FcTempHandle()
+        {
+            try
+            {
+                var hasMap = DEV.Instance.BulkGetVal<decimal>(FirePost.Fc, SignalType.R_Fc_Temp);
+                if (!hasMap.IsEmpty())
+                {
+                    hasMap.AsParallel().ForAll(kv =>
+                    {
+                        //var actionVal = MesManager.Instance.CallFireTempByFc(kv.Key, kv.Value); //放到最后通知MES，以提升响应性能
+                        var actionVal = BatMes.Enums.DeviceFireMode.None;
+                        var newCol = new FireControlModel
+                        {
+                            CellNo = kv.Key,
+                            FirePost = FirePost.Fc,
+                            DeviceStatus = DeviceStatus.TempAnomaly,
+                            FireAction = ChnageActionType(actionVal),
+                            WithoutByHand = Configs.AutoMinByFc, //分容库位比较特殊，需求改了比较多，做成灵活可配置
+                            TooHotCount = kv.Value.To<int>(),
+                            DevTemp = kv.Value
+                        };
+                        AddOrUpdateCol(newCol.CellNo, newCol);
+                        actionVal = MesManager.Instance.CallFireTempByFc(kv.Key, kv.Value);
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                //CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 高温静置烟雾判断任务
+        /// </summary>
+        public void HotStandbyHandle()
+        {
+            try
+            {
+                var hasMap = DEV.Instance.BulkGetVal<bool>(FirePost.HotStandby, SignalType.R_HotStandby);
+                if (!hasMap.IsEmpty())
+                {
+                    hasMap.AsParallel().ForAll(kv =>
+                    {
+                        if (kv.Value)
+                        {
+                            //var actionVal = MesManager.Instance.CallFireSmokeByStandby(kv.Key); //放到最后通知MES，以提升响应性能
+                            var actionVal = BatMes.Enums.DeviceFireMode.None;
+                            var newCol = new FireControlModel
+                            {
+                                CellNo = kv.Key,
+                                FirePost = FirePost.HotStandby,
+                                DeviceStatus = DeviceStatus.FireAlarm,
+                                FireAction = ChnageActionType(actionVal),
+                                WithoutByHand = Configs.AutoMinByStandby
+                            };
+                            AddOrUpdateCol(newCol.CellNo, newCol);
+                            actionVal = MesManager.Instance.CallFireSmokeByStandby(kv.Key);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                //CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 读取Modbus的温度
+        /// </summary>
+        public void ModbusTempHandle()
+        {
+            try
+            {
+                var hasMap = DEV.Instance.NoBulkGetVal<decimal>(FirePost.ModBus, SignalType.R_Modbus);
+                if (!hasMap.IsEmpty())
+                {
+                    hasMap.AsParallel().ForAll(kv =>
+                    {
+                        var postType = GetPostByCell(kv.Key);
+                        if (postType == FirePost.Unknown)
+                            return;
+                        var (tempAction, tempWarn) = KvTempPost[postType];
+                        if (kv.Value >= tempWarn)
+                        {
+                            var actionVal = BatMes.Enums.DeviceFireMode.None;
+                            var newCol = new FireControlModel
+                            {
+                                CellNo = kv.Key,
+                                FirePost = postType,
+                                DeviceStatus = DeviceStatus.TempAnomaly,
+                                FireAction = ChnageActionType(actionVal),
+                                WithoutByHand = Configs.AutoMinByStandby,
+                                DevTemp = kv.Value
+                            };
+                            AddOrUpdateCol(newCol.CellNo, newCol);
+                            //放到最后通知MES，以提升响应性能
+                            if (postType == FirePost.Fc)
+                                actionVal = MesManager.Instance.CallFireTempByFc(kv.Key, kv.Value);
+                            else
+                                actionVal = MesManager.Instance.CallFireTempByStandby(kv.Key, kv.Value);
+                        }
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+                //CORE.Instance.OnMessage($"{ex.Message}，详情请查询日志。", BatMes.Client.Enums.SysEventLevel.Warn);
+            }
+        }
+
+        /// <summary>
+        /// 感温光纤是否有报警点
+        /// </summary>
+        private void ModbusHasFire()
+        {
+            try
+            {
+                if (!Configs.OpenSpeakerByModbus)
+                    return;
+                var hasVal = DEV.Instance.GetModbusHasWarning();
+                if(hasVal != null && hasVal.Any())
+                {
+                    hasVal.ForEach(t =>
+                    {
+                        if(t.hasFire)
+                            DEV.Instance.OpenSpeaker(t.firePost);
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                LogManager.Error(ex.Message);
+            }
+        }
+
+        /// <summary>
+        /// 执行消防动作
+        /// </summary>
+        /// <param name="fireCol"></param>
+        private void DoOutFire(FireControlModel fireCol)
+        {
+            var postVal = fireCol.FirePost;
+            var actionVal = fireCol.FireAction;
+            var hasCellNo = fireCol.CellNo;
+            var opVal = DEV.Instance.DoOutFire(postVal, actionVal, hasCellNo);
+            if (opVal)
+            {
+                fireCol.IsAction = true;
+                fireCol.LastUpdateTime = DateTime.Now;
+                RemoveCol(fireCol.CellNo);
+            }
+            //定制化需求，反馈行列层给PLC
+            var hasCell = KvCellMap.ContainsKey(hasCellNo) ? KvCellMap[hasCellNo] : default;
+            if (hasCell != null)
+                DEV.Instance.FeedbackRcl(postVal, true, (ushort)hasCell.row.Value, (ushort)hasCell.col.Value, (ushort)hasCell.lay.Value);
+
+            CORE.Instance.OnMessage($"库位ID：{hasCellNo}，已通知设备执行喷淋。", BatMes.Client.Enums.SysEventLevel.Info);
+        }
+
+        /// <summary>
+        /// 手工喷淋或停止喷淋
+        /// </summary>
+        /// <param name="firePost"></param>
+        /// <param name="fireAction"></param>
+        /// <param name="cellNo"></param>
+        /// <param name="isReset"></param>
+        private void DoOutFireByHand(int cellNo, FirePost firePost, FireAction fireAction = FireAction.Spray, bool isSpray = true)
+        {
+            var opVal = DEV.Instance.DoOutFire(firePost, fireAction, cellNo, isSpray);
+            if (opVal)
+            {
+                RemoveCol(cellNo);
+            }
+            if (isSpray && opVal)
+            {
+                //定制化需求，反馈行列层给PLC
+                var hasCell = KvCellMap.ContainsKey(cellNo) ? KvCellMap[cellNo] : default;
+                if (hasCell != null)
+                    DEV.Instance.FeedbackRcl(firePost, true, (ushort)hasCell.row.Value, (ushort)hasCell.col.Value, (ushort)hasCell.lay.Value);
+            }
+
+            //记录人工操作日志，便于后期追溯
+            var typeMsg = isSpray ? "执行喷淋" : "停止喷淋";
+            var recordMsg = $"库位ID：{cellNo}，手工{typeMsg}，记录到日志。";
+            LogManager.Info(recordMsg);
+        }
+
+        /// <summary>
+        /// 执行心跳任务
+        /// </summary>
+        private void HreatBit()
+        {
+            DEV.Instance.DoHeartBit();
         }
         #endregion
+        #endregion
 
+        #region 扩展方法
         /// <summary>
-        /// 判断本地是否存在烟雾报警
-        /// </summary>
-        private void HasFireByLocal()
-        {
-            var busRes = DEV.Instance.HasSmoke();
-            if (!busRes.Any())
-                return;
-            var hasFire = GetFireModelsBySmoke(busRes);
-            HasFireNotifyMES(hasFire);
-        }
-
-        /// <summary>
-        /// 判断ModBus是否存在温度异常
-        /// </summary>
-        private void HasFireByModBus()
-        {
-            var busRes = DEV.Instance.BulkGetByModBus();
-            if (busRes == null)
-                return;
-            var hasFire = GetFireModelsByMBus(busRes);
-            HasFireNotifyMES(hasFire);
-        }
-
-        /// <summary>
-        /// 判断是否存在故障
-        /// </summary>
-        /// <param name="sourceRes"></param>
-        /// <returns></returns>
-        private List<FireModel> GetFireModelsByFault(byte[] sourceRes)
-        {
-            if (sourceRes == null)
-                return default;
-            List<FireModel> fireModels = new List<FireModel>();
-            var startCount = 1;
-            for (int i = 0; i < sourceRes.Length; i += 2)
-            {
-                var falutVal = BitConverter.ToUInt16(sourceRes, i);
-                if(falutVal > 0)
-                {
-                    var hasMap = (ErrorType)falutVal;
-                    var fireModel = new FireModel
-                    {
-                        CellId = PlcCellToMes(startCount),
-                        Message = faultMap.ContainsKey(hasMap) ? faultMap[hasMap] : "未知错误",
-                    };
-                    fireModels.Add(fireModel);
-                }
-                startCount++;
-            }
-            return fireModels;
-        }
-
-        /// <summary>
-        /// 判断是否存在温度异常
-        /// </summary>
-        /// <param name="sourceRes"></param>
-        /// <returns></returns>
-        private List<FireModel> GetFireModelsByMBus(byte[] sourceRes)
-        {
-            if (sourceRes == null)
-                return default;
-            List<FireModel> fireModels = new List<FireModel>();
-            var startCount = 1;
-            for (int i = 0; i < sourceRes.Length; i += 2)
-            {
-                var falutVal = BitConverter.ToInt16(sourceRes, i);
-                var uploadVal = decimal.Parse(falutVal.ToStringEx());
-                if (uploadVal > 0 && Configs.FireWarnTemp > 0 && uploadVal >= Configs.FireWarnTemp)
-                {
-                    var fireModel = new FireModel
-                    {
-                        CellId = PlcCellToMes(startCount),
-                        FireType = FireType.FireTemp,
-                        Temp = uploadVal
-                    };
-                    fireModels.Add(fireModel);
-                }
-                startCount++;
-            }
-            return fireModels;
-        }
-
-        /// <summary>
-        /// 判断是否存在烟雾报警
-        /// </summary>
-        /// <param name="sourceRes"></param>
-        /// <returns></returns>
-        private List<FireModel> GetFireModelsBySmoke(Dictionary<int, bool> sourceRes)
-        {
-            if (sourceRes == null)
-                return default;
-            List<FireModel> fireModels = new List<FireModel>();
-            sourceRes.ForEach(t =>
-            {
-                if (!t.Value)
-                    return;
-                var newModel = new FireModel
-                {
-                    CellId = PlcCellToMes(t.Key),
-                    FireType = FireType.Smoke
-                };
-                fireModels.Add(newModel);
-            });
-            return fireModels;
-        }
-
-        /// <summary>
-        /// 获取MES上设置的消防温度阈值
-        /// </summary>
-        private void GetFireSetByMes()
-        {
-            var procInfo = MesHelper.Instance.GetProcInfo(Configs.procID);
-            if (procInfo.IsEmpty())
-                return;
-            Configs.FireWarnTemp = procInfo.FireWarnTemp;
-            Configs.FireActTemp = procInfo.FireActTemp;
-        }
-
-        /// <summary>
-        /// 若有火警，则告知MES
-        /// </summary>
-        /// <param name="fireModels"></param>
-        private void HasFireNotifyMES(List<FireModel> fireModels)
-        {
-            fireModels?.AsParallel().ForAll(t =>
-            {
-                if(t.FireType == FireType.Smoke)
-                {
-                    var opFlag = MesHelper.Instance.CallFireSmoke(t.CellId);
-                    if (opFlag == BatMes.Enums.DeviceFireMode.Spray)
-                        ComfirmOpenFire(t.CellId);
-                } 
-                else if(t.FireType == FireType.FireTemp)
-                {
-                    var opFlag = MesHelper.Instance.CallFireTemp(t.CellId, t.Temp);
-                    if (opFlag == BatMes.Enums.DeviceFireMode.Spray)
-                        ComfirmOpenFire(t.CellId);
-                }   
-            });
-        }
-
-        /// <summary>
-        /// 判断是否打开消防
+        /// 通过库位ID获取当前库位属于哪个位置
         /// </summary>
         /// <param name="cellID"></param>
-        private void ComfirmOpenFire(int cellID)
+        /// <returns></returns>
+        private FirePost GetPostByCell(int cellID)
         {
-            DEV.Instance.WriteBool(SignalType.OR_OpenFire, GetCellForPLC(cellID));
-            var waitVal = DEV.Instance.WaitBool(SignalType.W_ConfirmFire, GetCellForPLC(cellID));
-            if (waitVal)
+            if (KvCellMap.ContainsKey(cellID))
+                return (FirePost)KvCellMap[cellID].type;
+            else
             {
-                DEV.Instance.NoticeSpray(GetCellForPLC(cellID));
-                CORE.Instance.OnMessage($"库位【{cellID}】发生火警，满足喷淋条件，已通知消防柜。", BatMes.Client.Enums.SysEventLevel.Info);
+                var logMsg = $"库位【{cellID}】找不到对应的位置，请检查库位表是否正确。";
+                LogManager.Warn(logMsg);
+                CORE.Instance.OnMessage(logMsg, BatMes.Client.Enums.SysEventLevel.Warn);
+                return FirePost.Unknown;
             }
+        }
+
+        /// <summary>
+        /// 切换执行类型
+        /// </summary>
+        /// <param name="deviceFireMode"></param>
+        /// <returns></returns>
+        private FireAction ChnageActionType(BatMes.Enums.DeviceFireMode deviceFireMode)
+        {
+            FireAction opVal = FireAction.Nothing;
+            switch (deviceFireMode)
+            {
+                case BatMes.Enums.DeviceFireMode.None:
+                    opVal = FireAction.Nothing;
+                    break;
+                case BatMes.Enums.DeviceFireMode.Spray:
+                    opVal = FireAction.Spray;
+                    break;
+            }
+            return opVal;
+        }
+
+        /// <summary>
+        /// 获取日志模型
+        /// </summary>
+        /// <param name="fireControl"></param>
+        /// <returns></returns>
+        private string GetLogMsg(FireControlModel fireControl)
+        {
+            if (fireControl == null) 
+                return string.Empty;
+            StringBuilder sbVal = new StringBuilder();
+            sbVal.Append($"库位ID：{fireControl.CellNo}，");
+            sbVal.Append($"库位类型：{fireControl.FirePost}，");
+            sbVal.Append($"库位状态：{fireControl.DeviceStatus}，");
+            sbVal.Append($"库位温度：{fireControl.DevTemp}，");
+            sbVal.Append($"超温点数：{fireControl.TooHotCount}，");
+            sbVal.Append($"执行动作：{fireControl.FireAction}");
+            return sbVal.ToString();
         }
         #endregion
 
@@ -605,133 +893,106 @@ namespace FireBusiness
         /// <param name="cellID"></param>
         /// <param name="execStatus"></param>
         /// <param name="isAdd"></param>
-        private void UptCellNotityUi(int cellID, string trayCode, DeviceStatus execStatus, BatMes.Enums.TrayAttr trayAttr = BatMes.Enums.TrayAttr.Battery, bool maybeAdd = false)
+        private void RemarkAndStatusToUI(int cellID, DeviceStatus execStatus, FireAction? fireAction = null, decimal? devTemp = null, string remark = null)
         {
-            var hasCell = Business.Instance.GetCellByID(cellID);
-            hasCell = hasCell ?? new cell { cell_id = cellID };
+            var hasCell = KvCellMap.ContainsKey(cellID) ? KvCellMap[cellID] : default;
+            if (hasCell == null)
+                return;
             hasCell.cell_status = (int)execStatus;
             hasCell.last_update_time = DateTime.Now;
-            hasCell.type = maybeAdd ? (int)trayAttr : hasCell.type;
-            var uptFlag = Business.Instance.AddOrUpdateCell(hasCell);
-            if (uptFlag)
-                PublicDel.AutoUpdateCellStatus?.Invoke(hasCell, trayCode);
+            hasCell.remark = remark;
+            hasCell.extend_field2 = fireAction != null ? ActionDesMap[fireAction.Value] : null;
+            if(devTemp != null && devTemp > 0)
+            {
+                hasCell.remark += hasCell.IsEmpty() ? $"库位温度（或分容超温数）：{devTemp}" : $"；库位温度（或分容超温数）：{devTemp}";
+            }
+
+            if(fireAction != null && fireAction == FireAction.Spray)
+            {
+                hasCell.cell_status = (int)DeviceStatus.SprayByHand;
+            }
+
+            //var uptFlag = Business.Instance.AddOrUpdateCell(hasCell);
+            //if (uptFlag)
+            PublicDel.AutoUpdateCellStatus?.Invoke(hasCell, default);
         }
 
         /// <summary>
-        /// 通知PLC复位库位
+        /// 仅更新备注信息
         /// </summary>
-        /// <param name="cellNo"></param>
-        /// <returns></returns>
-        public (bool isSuccess, string strMsg) ResetCell(int cellNo)
+        /// <param name="cellID"></param>
+        /// <param name="remarkCode"></param>
+        private void OnlyUptRemark(int cellID, string remarkCode)
         {
-            Task.Run(() =>
-            {
-                var opVal = DEV.Instance.WriteBool(SignalType.W_FalutReset, GetCellForPLC(cellNo));
-                var doRes = opVal ? $"库位【{cellNo}】已通知压床复位" : $"库位【{cellNo}】手工复位失败：写入PLC失败";
-                CORE.Instance.OnMessage(doRes, opVal ? BatMes.Client.Enums.SysEventLevel.Info : BatMes.Client.Enums.SysEventLevel.Warn);
-            });
-            return default;
+            var hasCell = KvCellMap.ContainsKey(cellID) ? KvCellMap[cellID] : default;
+            if (hasCell == null)
+                return;
+            PublicDel.AutoUpdateCellStatus?.Invoke(hasCell, remarkCode);
         }
 
         /// <summary>
-        /// 更新工步文件
+        /// 界面手工恢复正常状态
         /// </summary>
-        /// <param name="cellNo"></param>
+        /// <param name="cellID"></param>
         /// <returns></returns>
-        public (bool isSuccess, string strMsg) ReflushFileCell(int cellNo)
+        public void OnBackNormal(int cellID)
         {
             Task.Run(() =>
             {
-                try
-                {
-                    var hasModle = GetTrayModelByCell(cellNo);
-                    if(hasModle != null)
-                    {
-                        var opsFile = MesHelper.Instance.ProcessFile(hasModle.OpsValue, hasModle.Times);
-                        hasModle.FilePath = opsFile;
-                        var uptModel = new tray_map
-                        {
-                            cell_id = cellNo,
-                            mes_model = hasModle.JsonEncode(),
-                            last_update_time = DateTime.Now
-                        };
-                        Business.Instance.UpdateTrayModel(uptModel);
-                        CORE.Instance.OnMessage($"库位【{cellNo}】更新工步文件成功。", BatMes.Client.Enums.SysEventLevel.Info);
-                    }
-                    else
-                    {
-                        CORE.Instance.OnMessage($"更新工步文件失败：库位【{cellNo}】找不到对应的托盘模型。", BatMes.Client.Enums.SysEventLevel.Error);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    CORE.Instance.OnMessage($"更新工步文件异常：{ex.Message}", BatMes.Client.Enums.SysEventLevel.Error);
-                }
+                RemoveCol(cellID);
+                RemarkAndStatusToUI(cellID, DeviceStatus.Normal, null, null, "手工恢复正常状态");
             });
-            return default;
-        }
-
-
-        /// <summary>
-        /// 手工请求切换库位
-        /// </summary>
-        /// <param name="cellNo"></param>
-        /// <returns></returns>
-        public (bool isSuceess, string strMsg) OutChangeByHand(int cellNo)
-        {
-            Task.Run(() =>
-            {
-                try
-                {
-                    var hasModle = GetTrayModelByCell(cellNo);
-                    if (hasModle != null)
-                    {
-                        var opVal = MesHelper.Instance.OutChange(hasModle.CellID, hasModle.OpsValue, hasModle.TrayCode);
-                        if(opVal)
-                            CORE.Instance.OnMessage($"库位【{cellNo}】- 托盘【{hasModle.TrayCode}】已通知调度换库位。", BatMes.Client.Enums.SysEventLevel.Info);
-                    }
-                    else
-                    {
-                        CORE.Instance.OnMessage($"切换库位失败：库位【{cellNo}】找不到对应的托盘模型。", BatMes.Client.Enums.SysEventLevel.Error);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    CORE.Instance.OnMessage($"切换库位异常：{ex.Message}", BatMes.Client.Enums.SysEventLevel.Error);
-                }
-            });
-            return default;
         }
 
         /// <summary>
-        /// 手工请求出盘，当NG处理
+        /// 界面手工喷淋
         /// </summary>
-        /// <param name="cellNo"></param>
+        /// <param name="cellID"></param>
         /// <returns></returns>
-        public (bool isSuceess, string strMsg) OutUploadByHand(int cellNo)
+        public void OnDoSpray(int cellID, FirePost firePost)
         {
             Task.Run(() =>
             {
-                try
+                DoOutFireByHand(cellID, firePost);
+                //OnlyUptRemark(cellID, "手工执行喷淋");
+                RemarkAndStatusToUI(cellID, DeviceStatus.SprayByHand, FireAction.Spray, null, "手工喷淋");
+                CORE.Instance.OnMessage($"库位【{cellID}】通知设备执行喷淋...", BatMes.Client.Enums.SysEventLevel.Info);
+            });
+        }
+
+        /// <summary>
+        /// 界面手工取消喷淋
+        /// </summary>
+        /// <param name="cellID"></param>
+        /// <returns></returns>
+        public void OnCancelSpray(int cellID)
+        {
+            Task.Run(() =>
+            {
+                var haCol = KvHasControl.ContainsKey(cellID) ? KvHasControl[cellID] : default;
+                if (haCol != null)
                 {
-                    var hasModle = GetTrayModelByCell(cellNo);
-                    if (hasModle != null)
-                    {
-                        var opVal = MesHelper.Instance.OutUnload(hasModle.CellID, hasModle.OpsValue, hasModle.TrayAttr, hasModle.TrayCode);
-                        if (opVal)
-                            CORE.Instance.OnMessage($"库位【{cellNo}】- 托盘【{hasModle.TrayCode}】已通知调度出盘。", BatMes.Client.Enums.SysEventLevel.Info);
-                    }
-                    else
-                    {
-                        CORE.Instance.OnMessage($"请求出盘失败：库位【{cellNo}】找不到对应的托盘模型。", BatMes.Client.Enums.SysEventLevel.Error);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    CORE.Instance.OnMessage($"请求出盘失败：{ex.Message}", BatMes.Client.Enums.SysEventLevel.Error);
+                    haCol.IsCancel = true;
+                    haCol.ByHand = false;
+                    OnlyUptRemark(cellID, "手工取消喷淋");
+                    CORE.Instance.OnMessage($"库位【{cellID}】已取消喷淋...", BatMes.Client.Enums.SysEventLevel.Info);
                 }
             });
-            return default;
+        }
+
+        /// <summary>
+        /// 界面上点击停止喷淋，将喷淋动作停止
+        /// </summary>
+        /// <param name="cellID"></param>
+        public void OnStopSpray(int cellID, FirePost firePost)
+        {
+            Task.Run(() =>
+            {
+                DoOutFireByHand(cellID, firePost, FireAction.Spray, false);
+                //OnlyUptRemark(cellID, "手工停止喷淋");
+                RemarkAndStatusToUI(cellID, DeviceStatus.Normal, null, null, "手工停止喷淋");
+                CORE.Instance.OnMessage($"库位【{cellID}】通知设备停止喷淋...", BatMes.Client.Enums.SysEventLevel.Info);
+            });
         }
         #endregion
     }

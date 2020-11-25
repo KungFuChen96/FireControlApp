@@ -16,8 +16,6 @@ namespace FireBusiness.IntervalJob
         {
             return Task.Run(() =>
             {
-                //onstandby objRes = (onstandby)context.MergedJobDataMap["CommHubBase"];
-                //hub.SendHeartBit();
             });
         }
     }

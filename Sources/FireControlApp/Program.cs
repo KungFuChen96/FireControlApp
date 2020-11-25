@@ -89,8 +89,8 @@ namespace FireControlApp
         /// <param name="conText"></param>
         static void AddLog(string conText)
         {
-            //CORE.Instance.AddSysEventLog("捕获未处理的异常", conText, BatMes.Client.Enums.SysEventLevel.Error);
-            CORE.Instance.OnMessage($"捕获未处理的异常，详情：{conText}", BatMes.Client.Enums.SysEventLevel.Warn);
+            CORE.Instance.OnMessage($"捕获未处理的异常，详情请查看文件夹日志", BatMes.Client.Enums.SysEventLevel.Warn);
+            LogManager.Error(conText);
         }
     }
 }

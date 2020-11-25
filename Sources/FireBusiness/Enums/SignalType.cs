@@ -11,6 +11,8 @@ namespace FireBusiness.Enums
     /// </summary>
     public enum SignalType
     {
+        #region 分容
+
         #region 写
         /// <summary>
         /// 放盘完成
@@ -96,7 +98,93 @@ namespace FireBusiness.Enums
         /// <summary>
         /// 有烟雾报警
         /// </summary>
-        R_HasSmoke = 16
+        R_HasSmoke = 16,
+        #endregion
+
+        #endregion
+
+        #region 常温静置
+        /// <summary>
+        /// 批量读常温静置
+        /// </summary>
+        R_FcStandby = 17,
+        #endregion
+
+        #region 分容压床
+        /// <summary>
+        /// 分容烟雾判断
+        /// </summary>
+        R_Fc = 18,
+
+        /// <summary>
+        /// 分容温度判断
+        /// </summary>
+        R_Fc_Temp = 19,
+        #endregion
+
+        #region 高温静置
+        /// <summary>
+        /// 批量读常温静置烟雾
+        /// </summary>
+        R_HotStandby = 20,
+        #endregion
+
+        #region Modbus 感温光纤
+        /// <summary>
+        /// 批量读取modbus温度
+        /// </summary>
+        R_Modbus = 21,
+        #endregion
+
+        #region 心跳
+        /// <summary>
+        /// 常温静置心跳
+        /// </summary>
+        W_FcStandbyBit = 22,
+
+        /// <summary>
+        /// 高温静置心跳
+        /// </summary>
+        W_HotBit = 23,
+        #endregion
+
+        #region 喇叭
+        /// <summary>
+        /// 温度异常、烟雾报警则喇叭响起
+        /// </summary>
+        W_Speaker = 24,
+        #endregion
+
+        #region 定制化需求
+        /// <summary>
+        /// 通知电压要喷淋，电源会做一系列的动作，如断电
+        /// </summary>
+        W_NotifyFcSpray = 25,
+
+        /// <summary>
+        /// 弹开压床
+        /// </summary>
+        W_DoBrakeUp = 26,
+
+        /// <summary>
+        /// 感温光纤通道1(常温静置架1：由出入盘口的那个)
+        /// </summary>
+        R_Modbus1 = 27,
+
+        /// <summary>
+        /// 感温光纤通道2
+        /// </summary>
+        R_Modbus2 = 28,
+
+        /// <summary>
+        /// 感温光纤通道3（高温静置架1：靠近分容压床的那列）
+        /// </summary>
+        R_Modbus3 = 29,
+
+        /// <summary>
+        /// 感温光纤通道2
+        /// </summary>
+        R_Modbus4 = 30,
         #endregion
     }
 }
